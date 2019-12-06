@@ -51,11 +51,9 @@ fn is_register(word: &&str) -> Result<(RegisterKind, usize), String> {
 pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut VecDeque<Token>) {
     let line = line.replace(",", " ");
     let words: Vec<&str> = line.split_whitespace().collect();
-    let is_ignore_line = |t: &Vec<&str>| {
-        t.len() == 0 || (t.len() > 0 && t[0] == "#")
-    };
 
-    if is_ignore_line(&words) {
+    // Skip blank line either comment line
+    if words.len() == 0 || words.len() > 0 && words[0] == "#" {
         return;
     }
 
@@ -82,6 +80,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut VecDeque<Token>) 
                 "MOVE" => Token::new(TokenKind::INSTRUCTION(InstructionKind::MOVE), number_of_lines),
                 // Exception, Interrupt
                 "SYSCALL" => Token::new(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), number_of_lines),
+                "#"    => break,
                 _ => panic!("{}: invalid token: {}", number_of_lines, word),
             };
             tokens.push_back(t);

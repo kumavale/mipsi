@@ -44,6 +44,8 @@ pub enum TokenKind {
     INSTRUCTION(InstructionKind),
     INTEGER(i32),
     REGISTER(RegisterKind, usize),  // (_, index)
+    LABEL(String, usize),           // (literal, index)
+    ADDRESS(String),                // literal
     EOL,                            // End of Line
 }
 
@@ -62,8 +64,6 @@ impl Token {
         if let TokenKind::INSTRUCTION(k) = self.kind {
             Ok(k)
         } else {
-            //panic!("{}: expect TokenKind::INSTRUCTION(InstructionKind). but got: {:?}",
-            //    self.line, self.kind);
             Err(format!("{}: expect TokenKind::INSTRUCTION(InstructionKind). but got: {:?}",
                 self.line, self.kind))
         }
@@ -73,8 +73,6 @@ impl Token {
         if let TokenKind::REGISTER(_, i) = self.kind {
             Ok(i)
         } else {
-            //panic!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}",
-            //    self.line, self.kind);
             Err(format!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}",
                 self.line, self.kind))
         }
@@ -84,8 +82,6 @@ impl Token {
         if let TokenKind::INTEGER(i) = self.kind {
             Ok(i)
         } else {
-            //panic!("{}: expect TokenKind::INTEGER(i32). but got: {:?}",
-            //    );
             Err(format!("{}: expect TokenKind::INTEGER(i32). but got: {:?}",
                 self.line, self.kind))
         }
@@ -95,8 +91,6 @@ impl Token {
         if TokenKind::EOL == self.kind {
             Ok(())
         } else {
-            //panic!("{}: expect TokenKind::EOL. but got: {:?}",
-            //    self.line, self.kind);
             Err(format!("{}: expect TokenKind::EOL. but got: {:?}",
                 self.line, self.kind))
         }

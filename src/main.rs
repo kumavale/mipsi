@@ -49,6 +49,7 @@ Xor     $t1,    $t1,    $t1
 LI      $v0,    1
 MOVE    $a0,    $t2
 syscall
+syscall  # Here is comment too
 ";
 
     let mut tokens: VecDeque<token::Token> = VecDeque::new();

@@ -4,9 +4,11 @@ use std::collections::VecDeque;
 pub fn parse(mut tokens: VecDeque<Token>) {
 
     let mut registers = [0; 32];
+    let mut data: Vec<String> = vec![];
 
     while let Some(token) = tokens.pop_front() {
         //print!("{:?}", token);
+        //if let == TokenKind::ADDRESS(String)
         let instruction_kind = token.expect_instruction().unwrap();
 
         match instruction_kind {
@@ -46,10 +48,11 @@ pub fn parse(mut tokens: VecDeque<Token>) {
                 }
             },
             InstructionKind::SYSCALL  => {
-                //match register[v0] // TODO HashMap
-                match registers[2] {
+                match registers[2] {                                 // v0
                     // print_int
-                    1 => print!("{}", registers[4]),
+                    1 => print!("{}", registers[4]),                 // a0
+                    // print_string
+                    4 => print!("{}", data[registers[4] as usize]),  // a0
                     _ => (),
                 }
             },
