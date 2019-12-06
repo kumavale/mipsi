@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 
 pub fn parse(mut tokens: VecDeque<Token>) {
 
-    let mut r = [0; 16];
+    let mut registers = [0; 32];
 
     while let Some(token) = tokens.pop_front() {
         //print!("{:?}", token);
@@ -13,7 +13,7 @@ pub fn parse(mut tokens: VecDeque<Token>) {
             InstructionKind::ADD  => {
                 if let Some(token) = tokens.pop_front() {
                     let register_idx = token.expect_register();
-                    r[register_idx] = {
+                    registers[register_idx] = {
                         let mut r1_idx = 0;
                         if let Some(token) = tokens.pop_front() {
                             let register_idx = token.expect_register();
@@ -24,15 +24,15 @@ pub fn parse(mut tokens: VecDeque<Token>) {
                             let register_idx = token.expect_register();
                             r2_idx = register_idx;
                         }
-                        r[r1_idx] + r[r2_idx]
+                        registers[r1_idx] + registers[r2_idx]
                     };
-                    //println!("r[{}]: {}", register_idx, r[register_idx]);
+                    //println!("registers[{}]: {}", register_idx, registers[register_idx]);
                 }
             },
             InstructionKind::ADDI => {
                 if let Some(token) = tokens.pop_front() {
                     let register_idx = token.expect_register();
-                    r[register_idx] = {
+                    registers[register_idx] = {
                         let mut r1_idx = 0;
                         if let Some(token) = tokens.pop_front() {
                             let register_idx = token.expect_register();
@@ -42,9 +42,9 @@ pub fn parse(mut tokens: VecDeque<Token>) {
                         if let Some(token) = tokens.pop_front() {
                             integer_literal = token.expect_integer();
                         }
-                        r[r1_idx] + integer_literal
+                        registers[r1_idx] + integer_literal
                     };
-                    //println!("r[{}]: {}", register_idx, r[register_idx]);
+                    //println!("registers[{}]: {}", register_idx, registers[register_idx]);
                 }
             },
             InstructionKind::SUB  => {
@@ -56,7 +56,7 @@ pub fn parse(mut tokens: VecDeque<Token>) {
             InstructionKind::XOR  => {
                 if let Some(token) = tokens.pop_front() {
                     let register_idx = token.expect_register();
-                    r[register_idx] = {
+                    registers[register_idx] = {
                         let mut r1_idx = 0;
                         if let Some(token) = tokens.pop_front() {
                             let register_idx = token.expect_register();
@@ -67,9 +67,9 @@ pub fn parse(mut tokens: VecDeque<Token>) {
                             let register_idx = token.expect_register();
                             r2_idx = register_idx;
                         }
-                        r[r1_idx] ^ r[r2_idx]
+                        registers[r1_idx] ^ registers[r2_idx]
                     };
-                    //println!("r[{}]: {}", register_idx, r[register_idx]);
+                    //println!("registers[{}]: {}", register_idx, registers[register_idx]);
                 }
             },
             //_ => (),
@@ -82,8 +82,8 @@ pub fn parse(mut tokens: VecDeque<Token>) {
     }
 
     // Display all registers
-    for (i, r) in r.iter().enumerate() {
-        println!("r[{}]: {}", i, r);
+    for (i, r) in registers.iter().enumerate() {
+        println!("registers[{}]: {}", i, r);
     }
 
 }
