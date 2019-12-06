@@ -58,39 +58,47 @@ impl Token {
         Token { kind, line }
     }
 
-    pub fn expect_instruction(&self) -> InstructionKind {
+    pub fn expect_instruction(&self) -> Result<InstructionKind, String> {
         if let TokenKind::INSTRUCTION(k) = self.kind {
-            return k;
+            Ok(k)
         } else {
-            panic!("{}: expect TokenKind::INSTRUCTION(InstructionKind). but got: {:?}",
-                self.line, self.kind);
+            //panic!("{}: expect TokenKind::INSTRUCTION(InstructionKind). but got: {:?}",
+            //    self.line, self.kind);
+            Err(format!("{}: expect TokenKind::INSTRUCTION(InstructionKind). but got: {:?}",
+                self.line, self.kind))
         }
     }
 
-    pub fn expect_register(&self) -> usize {
+    pub fn expect_register(&self) -> Result<usize, String> {
         if let TokenKind::REGISTER(_, i) = self.kind {
-            i
+            Ok(i)
         } else {
-            panic!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}",
-                self.line, self.kind);
+            //panic!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}",
+            //    self.line, self.kind);
+            Err(format!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}",
+                self.line, self.kind))
         }
     }
 
-    pub fn expect_integer(&self) -> i32 {
+    pub fn expect_integer(&self) -> Result<i32, String> {
         if let TokenKind::INTEGER(i) = self.kind {
-            i
+            Ok(i)
         } else {
-            panic!("{}: expect TokenKind::INTEGER(i32). but got: {:?}",
-                self.line, self.kind);
+            //panic!("{}: expect TokenKind::INTEGER(i32). but got: {:?}",
+            //    );
+            Err(format!("{}: expect TokenKind::INTEGER(i32). but got: {:?}",
+                self.line, self.kind))
         }
     }
 
-    pub fn expect_eol(&self) {
+    pub fn expect_eol(&self) -> Result<(), String> {
         if TokenKind::EOL == self.kind {
-            // Do nothing
+            Ok(())
         } else {
-            panic!("{}: expect TokenKind::EOL. but got: {:?}",
-                self.line, self.kind);
+            //panic!("{}: expect TokenKind::EOL. but got: {:?}",
+            //    self.line, self.kind);
+            Err(format!("{}: expect TokenKind::EOL. but got: {:?}",
+                self.line, self.kind))
         }
     }
 }

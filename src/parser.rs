@@ -7,96 +7,42 @@ pub fn parse(mut tokens: VecDeque<Token>) {
 
     while let Some(token) = tokens.pop_front() {
         //print!("{:?}", token);
-        let instruction_kind = token.expect_instruction();
+        let instruction_kind = token.expect_instruction().unwrap();
 
         match instruction_kind {
-            InstructionKind::ADD  => {
-                if let Some(token) = tokens.pop_front() {
-                    let register_idx = token.expect_register();
-                    registers[register_idx] = {
-                        let mut r1_idx = 0;
-                        if let Some(token) = tokens.pop_front() {
-                            let register_idx = token.expect_register();
-                            r1_idx = register_idx;
-                        }
-                        let mut r2_idx = 0;
-                        if let Some(token) = tokens.pop_front() {
-                            let register_idx = token.expect_register();
-                            r2_idx = register_idx;
-                        }
-                        registers[r1_idx] + registers[r2_idx]
-                    };
-                    //println!("registers[{}]: {}", register_idx, registers[register_idx]);
-                }
-            },
+            InstructionKind::ADD |
             InstructionKind::ADDI => {
-                if let Some(token) = tokens.pop_front() {
-                    let register_idx = token.expect_register();
-                    registers[register_idx] = {
-                        let mut r1_idx = 0;
-                        if let Some(token) = tokens.pop_front() {
-                            let register_idx = token.expect_register();
-                            r1_idx = register_idx;
-                        }
-                        let mut integer_literal = 0;
-                        if let Some(token) = tokens.pop_front() {
-                            integer_literal = token.expect_integer();
-                        }
-                        registers[r1_idx] + integer_literal
-                    };
-                    //println!("registers[{}]: {}", register_idx, registers[register_idx]);
-                }
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y);
             },
             InstructionKind::SUB  => {
-                // TODO
-                tokens.pop_front();
-                tokens.pop_front();
-                tokens.pop_front();
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y);
             },
             InstructionKind::XOR  => {
-                if let Some(token) = tokens.pop_front() {
-                    let register_idx = token.expect_register();
-                    registers[register_idx] = {
-                        let mut r1_idx = 0;
-                        if let Some(token) = tokens.pop_front() {
-                            let register_idx = token.expect_register();
-                            r1_idx = register_idx;
-                        }
-                        let mut r2_idx = 0;
-                        if let Some(token) = tokens.pop_front() {
-                            let register_idx = token.expect_register();
-                            r2_idx = register_idx;
-                        }
-                        registers[r1_idx] ^ registers[r2_idx]
-                    };
-                    //println!("registers[{}]: {}", register_idx, registers[register_idx]);
-                }
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x ^ y);
             },
             InstructionKind::LI  => {
                 if let Some(token) = tokens.pop_front() {
-                    let register_idx = token.expect_register();
+                    let register_idx = token.expect_register().unwrap();
                     registers[register_idx] = {
                         let mut integer_literal = 0;
                         if let Some(token) = tokens.pop_front() {
-                            integer_literal = token.expect_integer();
+                            integer_literal = token.expect_integer().unwrap();
                         }
                         integer_literal
                     };
-                    //println!("registers[{}]: {}", register_idx, registers[register_idx]);
                 }
             },
             InstructionKind::MOVE  => {
                 if let Some(token) = tokens.pop_front() {
-                    let register_idx = token.expect_register();
+                    let register_idx = token.expect_register().unwrap();
                     registers[register_idx] = {
                         let mut r1_idx = 0;
                         if let Some(token) = tokens.pop_front() {
-                            let register_idx = token.expect_register();
+                            let register_idx = token.expect_register().unwrap();
                             r1_idx = register_idx;
                         }
                         registers[r1_idx]
                     };
-                    //println!("registers[{}]: {}", register_idx, registers[register_idx]);
                 }
             },
             InstructionKind::SYSCALL  => {
@@ -112,7 +58,9 @@ pub fn parse(mut tokens: VecDeque<Token>) {
 
         // expect TokenKind::EOL
         if let Some(token) = tokens.pop_front() {
-            token.expect_eol();
+            if let Err(e) = token.expect_eol() {
+                panic!("{}", e);
+            }
         }
     }
 
@@ -122,3 +70,33 @@ pub fn parse(mut tokens: VecDeque<Token>) {
     //}
 
 }
+
+fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut VecDeque<Token>, fun: F)
+where
+    F: Fn(i32, i32) -> i32,
+{
+    if let Some(token) = tokens.pop_front() {
+        if let Ok(rd_idx) = token.expect_register() {
+            registers[rd_idx] = {
+                let mut r1 = 0;
+                if let Some(token) = tokens.pop_front() {
+                    if let Ok(register_idx) = token.expect_register() {
+                        r1 = registers[register_idx];
+                    } else if let Ok(num) = token.expect_integer() {
+                        r1 = num;
+                    }
+                }
+                let mut r2 = 0;
+                if let Some(token) = tokens.pop_front() {
+                    if let Ok(register_idx) = token.expect_register() {
+                        r2 = registers[register_idx];
+                    } else if let Ok(num) = token.expect_integer() {
+                        r2 = num;
+                    }
+                }
+                fun(r1, r2)
+            };
+        }
+    }
+}
+
