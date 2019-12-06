@@ -1,0 +1,43 @@
+# Very Small MIPS Interpreter
+
+## Supported
+- [ ] Arithmetic, Logic
+    - [ ] ADD
+    - [ ] ADDI
+    - [ ] SUB
+    - [ ] XOR
+- [ ] Constant
+    - [ ] LUI
+    - [ ] LI
+- [ ] Comparison
+    - [ ] SLT
+    - [ ] SLTI
+    - [ ] SEQ
+    - [ ] SGE
+    - [ ] SGT
+    - [ ] SLE
+    - [ ] SNE
+- [ ] Branch, Jump
+    - [ ] BEQ
+    - [ ] BNE
+    - [ ] SLT
+    - [ ] J
+    - [ ] JR
+- [ ] Load, Store
+    - [ ] LA
+    - [ ] LI
+    - [ ] LW
+    - [ ] SW
+- [ ] Transfer
+    - [ ] MOVE
+    - [ ] MFHI
+    - [ ] MFLO
+    - [ ] MTHI
+    - [ ] MTLO
+    - [ ] MOVN
+    - [ ] MOVZ
+- [ ] Exception, Interrupt
+    - [ ] SYSCALL
+    - [ ] BREAK
+    - [ ] BOP
+
