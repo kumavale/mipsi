@@ -42,11 +42,13 @@ fn test_tokenize() {
 
     let input = "\
 # This is comment.
-ADDI	$t0,	$t0,	1
+ADDI    $0,     $31,    256
 add	$t1,	$t2,	$t3
 SUB     $t4,    $t5,    $t6
 Xor     $t1,    $t1,    $t1
-ADDI    $0,     $31,    256
+LI      $v0,    1
+MOVE    $a0,    $t2
+syscall
 ";
 
     let mut tokens: VecDeque<token::Token> = VecDeque::new();
@@ -58,9 +60,9 @@ ADDI    $0,     $31,    256
     }
 
     assert_eq!(tokens[0].kind,  TokenKind::INSTRUCTION(InstructionKind::ADDI));
-    assert_eq!(tokens[1].kind,  TokenKind::REGISTER(RegisterKind::t0, 8));
-    assert_eq!(tokens[2].kind,  TokenKind::REGISTER(RegisterKind::t0, 8));
-    assert_eq!(tokens[3].kind,  TokenKind::INTEGER(1));
+    assert_eq!(tokens[1].kind,  TokenKind::REGISTER(RegisterKind::zero,  0));
+    assert_eq!(tokens[2].kind,  TokenKind::REGISTER(RegisterKind::ra,   31));
+    assert_eq!(tokens[3].kind,  TokenKind::INTEGER(256));
     assert_eq!(tokens[4].kind,  TokenKind::EOL);
     assert_eq!(tokens[5].kind,  TokenKind::INSTRUCTION(InstructionKind::ADD));
     assert_eq!(tokens[6].kind,  TokenKind::REGISTER(RegisterKind::t1,  9));
@@ -77,11 +79,16 @@ ADDI    $0,     $31,    256
     assert_eq!(tokens[17].kind, TokenKind::REGISTER(RegisterKind::t1, 9));
     assert_eq!(tokens[18].kind, TokenKind::REGISTER(RegisterKind::t1, 9));
     assert_eq!(tokens[19].kind, TokenKind::EOL);
-    assert_eq!(tokens[20].kind, TokenKind::INSTRUCTION(InstructionKind::ADDI));
-    assert_eq!(tokens[21].kind, TokenKind::REGISTER(RegisterKind::zero,  0));
-    assert_eq!(tokens[22].kind, TokenKind::REGISTER(RegisterKind::ra,   31));
-    assert_eq!(tokens[23].kind, TokenKind::INTEGER(256));
-    assert_eq!(tokens[24].kind, TokenKind::EOL);
+    assert_eq!(tokens[20].kind, TokenKind::INSTRUCTION(InstructionKind::LI));
+    assert_eq!(tokens[21].kind, TokenKind::REGISTER(RegisterKind::v0, 2));
+    assert_eq!(tokens[22].kind, TokenKind::INTEGER(1));
+    assert_eq!(tokens[23].kind, TokenKind::EOL);
+    assert_eq!(tokens[24].kind, TokenKind::INSTRUCTION(InstructionKind::MOVE));
+    assert_eq!(tokens[25].kind, TokenKind::REGISTER(RegisterKind::a0,  4));
+    assert_eq!(tokens[26].kind, TokenKind::REGISTER(RegisterKind::t2, 10));
+    assert_eq!(tokens[27].kind, TokenKind::EOL);
+    assert_eq!(tokens[28].kind, TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
+    assert_eq!(tokens[29].kind, TokenKind::EOL);
 }
 
 #[test]
@@ -111,6 +118,16 @@ fn test_parse() {
     tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t1, 9), 18));
     tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t1, 9), 19));
     tokens.push_back(Token::new(TokenKind::EOL, 20));
+    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::LI), 21));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::v0, 2), 22));
+    tokens.push_back(Token::new(TokenKind::INTEGER(1), 23));
+    tokens.push_back(Token::new(TokenKind::EOL, 24));
+    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::MOVE), 25));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::a0,  4), 26));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t2, 10), 27));
+    tokens.push_back(Token::new(TokenKind::EOL, 28));
+    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), 29));
+    tokens.push_back(Token::new(TokenKind::EOL, 30));
 
     parser::parse(tokens);
 }

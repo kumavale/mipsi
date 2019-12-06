@@ -1,9 +1,25 @@
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum InstructionKind {
+    /// Arithmetic, Logic
     ADD,
     ADDI,
     SUB,
     XOR,
+
+    /// Constant
+    LI,
+
+    /// Comparison
+
+    /// Branch, Jump
+
+    /// Load, Store
+
+    /// Transfer
+    MOVE,
+
+    /// Exception, Interrupt
+    SYSCALL,
 }
 
 #[derive(Debug, PartialEq)]

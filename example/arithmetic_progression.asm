@@ -26,4 +26,8 @@ ADD		$t2,	$t1,	$t2
 # calc 10 item
 ADDI	$t1,	$t1,	1
 ADD		$t2,	$t1,	$t2
+# print result
+LI		$v0,	1
+MOVE	$a0,	$t2
+SYSCALL
 

@@ -68,10 +68,20 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut VecDeque<Token>) 
             tokens.push_back(t);
         } else {
             let t = match &*word.to_ascii_uppercase() {
+                // Arithmetic, Logic
                 "ADD"  => Token::new(TokenKind::INSTRUCTION(InstructionKind::ADD),  number_of_lines),
                 "ADDI" => Token::new(TokenKind::INSTRUCTION(InstructionKind::ADDI), number_of_lines),
                 "SUB"  => Token::new(TokenKind::INSTRUCTION(InstructionKind::SUB),  number_of_lines),
                 "XOR"  => Token::new(TokenKind::INSTRUCTION(InstructionKind::XOR),  number_of_lines),
+                // Constant
+                "LI"   => Token::new(TokenKind::INSTRUCTION(InstructionKind::LI),   number_of_lines),
+                // Comparison
+                // Branch, Jump
+                // Load, Store
+                // Transfer
+                "MOVE" => Token::new(TokenKind::INSTRUCTION(InstructionKind::MOVE), number_of_lines),
+                // Exception, Interrupt
+                "SYSCALL" => Token::new(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), number_of_lines),
                 _ => panic!("{}: invalid token: {}", number_of_lines, word),
             };
             tokens.push_back(t);

@@ -72,6 +72,41 @@ pub fn parse(mut tokens: VecDeque<Token>) {
                     //println!("registers[{}]: {}", register_idx, registers[register_idx]);
                 }
             },
+            InstructionKind::LI  => {
+                if let Some(token) = tokens.pop_front() {
+                    let register_idx = token.expect_register();
+                    registers[register_idx] = {
+                        let mut integer_literal = 0;
+                        if let Some(token) = tokens.pop_front() {
+                            integer_literal = token.expect_integer();
+                        }
+                        integer_literal
+                    };
+                    //println!("registers[{}]: {}", register_idx, registers[register_idx]);
+                }
+            },
+            InstructionKind::MOVE  => {
+                if let Some(token) = tokens.pop_front() {
+                    let register_idx = token.expect_register();
+                    registers[register_idx] = {
+                        let mut r1_idx = 0;
+                        if let Some(token) = tokens.pop_front() {
+                            let register_idx = token.expect_register();
+                            r1_idx = register_idx;
+                        }
+                        registers[r1_idx]
+                    };
+                    //println!("registers[{}]: {}", register_idx, registers[register_idx]);
+                }
+            },
+            InstructionKind::SYSCALL  => {
+                //match register[v0] // TODO HashMap
+                match registers[2] {
+                    // print_int
+                    1 => print!("{}", registers[4]),
+                    _ => (),
+                }
+            },
             //_ => (),
         }
 
@@ -82,8 +117,8 @@ pub fn parse(mut tokens: VecDeque<Token>) {
     }
 
     // Display all registers
-    for (i, r) in registers.iter().enumerate() {
-        println!("registers[{}]: {}", i, r);
-    }
+    //for (i, r) in registers.iter().enumerate() {
+    //    println!("registers[{}]: {}", i, r);
+    //}
 
 }
