@@ -36,12 +36,12 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut VecDeque<Token>) 
             let t = Token::new(TokenKind::REGISTER(k, i), number_of_lines);
             tokens.push_back(t);
         } else {
-            let t = match word {
+            let t = match &*word.to_ascii_uppercase() {
                 "ADD"  => Token::new(TokenKind::INSTRUCTION(InstructionKind::ADD),  number_of_lines),
                 "ADDI" => Token::new(TokenKind::INSTRUCTION(InstructionKind::ADDI), number_of_lines),
                 "SUB"  => Token::new(TokenKind::INSTRUCTION(InstructionKind::SUB),  number_of_lines),
                 "XOR"  => Token::new(TokenKind::INSTRUCTION(InstructionKind::XOR),  number_of_lines),
-                _ => panic!("Invalid token: \"{}\"", word),
+                _ => panic!("{}: invalid token: {}", number_of_lines, word),
             };
             tokens.push_back(t);
         }

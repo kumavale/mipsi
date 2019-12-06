@@ -44,7 +44,7 @@ impl Token {
         if let TokenKind::REGISTER(_, i) = self.kind {
             i
         } else {
-            panic!("{}: expect TokenKind::REGISTER(String). but got: {:?}",
+            panic!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}",
                 self.line, self.kind);
         }
     }

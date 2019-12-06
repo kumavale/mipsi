@@ -43,9 +43,9 @@ fn test_tokenize() {
     let input = "\
 # This is comment.
 ADDI	r8,	r0,	1
-ADD	r9,	r0,	r8
+add	r9,	r0,	r8
 SUB     r9,     r1,     r2
-XOR     r3,     r4,     r5
+Xor     r3,     r4,     r5
 ";
 
     let mut tokens: VecDeque<token::Token> = VecDeque::new();
@@ -85,26 +85,26 @@ fn test_parse() {
 
     let mut tokens: VecDeque<token::Token> = VecDeque::new();
 
-    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::ADDI), 0));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 8), 0));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 0), 0));
-    tokens.push_back(Token::new(TokenKind::INTEGER(1), 0));
-    tokens.push_back(Token::new(TokenKind::EOL, 0));
-    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::ADD), 0));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 9), 0));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 0), 0));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 8), 0));
-    tokens.push_back(Token::new(TokenKind::EOL, 0));
-    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::SUB), 0));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 9), 0));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 1), 0));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 2), 0));
-    tokens.push_back(Token::new(TokenKind::EOL, 0));
-    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::XOR), 0));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 3), 0));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 4), 0));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 5), 0));
-    tokens.push_back(Token::new(TokenKind::EOL, 0));
+    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::ADDI), 1));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 8), 2));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 0), 3));
+    tokens.push_back(Token::new(TokenKind::INTEGER(1), 4));
+    tokens.push_back(Token::new(TokenKind::EOL, 5));
+    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::ADD), 6));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 9), 7));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 0), 8));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 8), 9));
+    tokens.push_back(Token::new(TokenKind::EOL, 10));
+    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::SUB), 11));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 9), 12));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 1), 13));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 2), 14));
+    tokens.push_back(Token::new(TokenKind::EOL, 15));
+    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::XOR), 16));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 3), 17));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 4), 18));
+    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::r, 5), 19));
+    tokens.push_back(Token::new(TokenKind::EOL, 20));
 
     parser::parse(tokens);
 }
