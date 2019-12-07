@@ -1,45 +1,40 @@
 use super::token::*;
-use std::collections::VecDeque;
 
-pub fn parse(mut tokens: VecDeque<Token>) {
+pub fn parse(mut tokens: Tokens) {
 
     let mut registers = [0; 32];
     //let mut data: Vec<String> = vec![];
 
-    while let Some(token) = tokens.pop_front() {
-        //print!("{:?}", token);
+    while let Some(token) = tokens.consume() {
+        //println!("{:?}", token);
 
-        if let TokenKind::LABEL(_, _) = token.kind {
-            if let Some(token) = tokens.pop_front() {
-                token.expect_eol().unwrap();
-                continue;
-            }
+        if let TokenKind::LABEL(_, _) = token.0 {
+            tokens.consume();
+            tokens.expect_eol().unwrap();
+            continue;
         }
 
-        let instruction_kind = token.expect_instruction().unwrap();
+        let instruction_kind = tokens.expect_instruction().unwrap();
 
         match instruction_kind {
             // Arithmetic, Logic
             InstructionKind::ADD |
-            InstructionKind::ADDI => {
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y);
-            },
-            InstructionKind::SUB  => {
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y);
-            },
-            InstructionKind::XOR  => {
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x ^ y);
-            },
+            InstructionKind::ADDI =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y),
+            InstructionKind::SUB  =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y),
+            InstructionKind::XOR  =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x ^ y),
             // Constant
             InstructionKind::LI  => {
-                if let Some(token) = tokens.pop_front() {
-                    let register_idx = token.expect_register().unwrap();
+                if let Some(_) = tokens.consume() {
+                    let register_idx = tokens.expect_register().unwrap();
                     registers[register_idx] = {
-                        let mut integer_literal = 0;
-                        if let Some(token) = tokens.pop_front() {
-                            integer_literal = token.expect_integer().unwrap();
+                        let mut integer = 0;
+                        if let Some(_) = tokens.consume() {
+                            integer = tokens.expect_integer().unwrap();
                         }
-                        integer_literal
+                        integer
                     };
                 }
             },
@@ -47,34 +42,35 @@ pub fn parse(mut tokens: VecDeque<Token>) {
 
             // Branch, Jump
             InstructionKind::BLT  => {
-                //tokens.pop_front();  // Rsrc1
-                //tokens.pop_front();  // Rsrc2
-                //tokens.pop_front();  // label
-                if let Some(token) = tokens.pop_front() {
-                    if let Ok(rsrc1_idx) = token.expect_register() {
-                        if let Some(token) = tokens.pop_front() {
-                            if let Ok(rsrc2_idx) = token.expect_register() {
-                                if let Some(token) = tokens.pop_front() {
-                                    if registers[rsrc1_idx] < registers[rsrc2_idx] {
-                                        // goto label
-                                        //I = token.expect_address();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                // TODO
+                tokens.consume();  // Rsrc1
+                tokens.consume();  // Rsrc2
+                tokens.consume();  // label
+                //if let Some(token) = tokens.pop_front() {
+                //    if let Ok(rsrc1_idx) = token.expect_register() {
+                //        if let Some(token) = tokens.pop_front() {
+                //            if let Ok(rsrc2_idx) = token.expect_register() {
+                //                if let Some(token) = tokens.pop_front() {
+                //                    if registers[rsrc1_idx] < registers[rsrc2_idx] {
+                //                        // goto label
+                //                        //I = token.expect_address();
+                //                    }
+                //                }
+                //            }
+                //        }
+                //    }
+                //}
             },
             // Load, Store
 
             // Transfer
             InstructionKind::MOVE  => {
-                if let Some(token) = tokens.pop_front() {
-                    let register_idx = token.expect_register().unwrap();
+                if let Some(_) = tokens.consume() {
+                    let register_idx = tokens.expect_register().unwrap();
                     registers[register_idx] = {
                         let mut r1_idx = 0;
-                        if let Some(token) = tokens.pop_front() {
-                            let register_idx = token.expect_register().unwrap();
+                        if let Some(_) = tokens.consume() {
+                            let register_idx = tokens.expect_register().unwrap();
                             r1_idx = register_idx;
                         }
                         registers[r1_idx]
@@ -95,9 +91,8 @@ pub fn parse(mut tokens: VecDeque<Token>) {
         }
 
         // expect TokenKind::EOL
-        if let Some(token) = tokens.pop_front() {
-            token.expect_eol().unwrap();
-        }
+        tokens.consume();
+        tokens.expect_eol().unwrap();
     }
 
     // Display all registers
@@ -107,26 +102,26 @@ pub fn parse(mut tokens: VecDeque<Token>) {
     //}
 }
 
-fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut VecDeque<Token>, fun: F)
+fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
 where
     F: Fn(i32, i32) -> i32,
 {
-    if let Some(token) = tokens.pop_front() {
-        if let Ok(rd_idx) = token.expect_register() {
+    if let Some(token) = tokens.consume() {
+        if let Ok(rd_idx) = tokens.expect_register() {
             registers[rd_idx] = {
                 let mut r1 = 0;
-                if let Some(token) = tokens.pop_front() {
-                    if let Ok(register_idx) = token.expect_register() {
+                if let Some(token) = tokens.consume() {
+                    if let Ok(register_idx) = tokens.expect_register() {
                         r1 = registers[register_idx];
-                    } else if let Ok(num) = token.expect_integer() {
+                    } else if let Ok(num) = tokens.expect_integer() {
                         r1 = num;
                     }
                 }
                 let mut r2 = 0;
-                if let Some(token) = tokens.pop_front() {
-                    if let Ok(register_idx) = token.expect_register() {
+                if let Some(token) = tokens.consume() {
+                    if let Ok(register_idx) = tokens.expect_register() {
                         r2 = registers[register_idx];
-                    } else if let Ok(num) = token.expect_integer() {
+                    } else if let Ok(num) = tokens.expect_integer() {
                         r2 = num;
                     }
                 }
@@ -136,42 +131,45 @@ where
     }
 }
 
+fn update_idx(i: usize) {
+}
+
 #[test]
 #[cfg(test)]
 fn test_parse() {
 
-    let mut tokens: VecDeque<Token> = VecDeque::new();
+    let mut tokens: Tokens = Tokens::new();
 
-    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::ADDI), 1));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t0, 8), 2));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t0, 8), 3));
-    tokens.push_back(Token::new(TokenKind::INTEGER(1), 4));
-    tokens.push_back(Token::new(TokenKind::EOL, 5));
-    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::ADD), 6));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t1,  9), 7));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t2, 10), 8));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t3, 11), 9));
-    tokens.push_back(Token::new(TokenKind::EOL, 10));
-    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::SUB), 11));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t4, 12), 12));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t5, 13), 13));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t6, 14), 14));
-    tokens.push_back(Token::new(TokenKind::EOL, 15));
-    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::XOR), 16));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t1, 9), 17));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t1, 9), 18));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t1, 9), 19));
-    tokens.push_back(Token::new(TokenKind::EOL, 20));
-    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::LI), 21));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::v0, 2), 22));
-    tokens.push_back(Token::new(TokenKind::INTEGER(1), 23));
-    tokens.push_back(Token::new(TokenKind::EOL, 24));
-    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::MOVE), 25));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::a0,  4), 26));
-    tokens.push_back(Token::new(TokenKind::REGISTER(RegisterKind::t2, 10), 27));
-    tokens.push_back(Token::new(TokenKind::EOL, 28));
-    tokens.push_back(Token::new(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), 29));
-    tokens.push_back(Token::new(TokenKind::EOL, 30));
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI), 1);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 2);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 3);
+    tokens.push(TokenKind::INTEGER(1), 4);
+    tokens.push(TokenKind::EOL, 5);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADD), 6);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t1,  9), 7);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t2, 10), 8);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t3, 11), 9);
+    tokens.push(TokenKind::EOL, 10);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SUB), 11);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t4, 12), 12);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t5, 13), 13);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t6, 14), 14);
+    tokens.push(TokenKind::EOL, 15);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::XOR), 16);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 17);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 18);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 19);
+    tokens.push(TokenKind::EOL, 20);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::LI), 21);
+    tokens.push(TokenKind::REGISTER(RegisterKind::v0, 2), 22);
+    tokens.push(TokenKind::INTEGER(1), 23);
+    tokens.push(TokenKind::EOL, 24);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::MOVE), 25);
+    tokens.push(TokenKind::REGISTER(RegisterKind::a0,  4), 26);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t2, 10), 27);
+    tokens.push(TokenKind::EOL, 28);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), 29);
+    tokens.push(TokenKind::EOL, 30);
 
     parse(tokens);
 }

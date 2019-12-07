@@ -23,7 +23,7 @@ pub enum InstructionKind {
     SYSCALL,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[allow(non_camel_case_types)]
 pub enum RegisterKind {
     zero,                            //     0: Hard-wired to 0
@@ -40,7 +40,7 @@ pub enum RegisterKind {
     ra,                              //    31: Return Address
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
     INSTRUCTION(InstructionKind),
     INTEGER(i32),
@@ -51,49 +51,86 @@ pub enum TokenKind {
 }
 
 #[derive(Debug)]
-pub struct Token {
-    pub kind: TokenKind,
-    pub line: u32,        // Number of lines
+pub struct Tokens {
+    token: Vec<(TokenKind, u32)>,   // (TokenKind, number of lines)
+    idx: usize,                     // Current index
+    foremost: bool,                 // Foremost
+    length: usize,                     // Token length
 }
 
-impl Token {
-    pub fn new(kind: TokenKind, line: u32) -> Self {
-        Token { kind, line }
+//pub type Token = (TokenKind, u32);
+
+impl Tokens {
+    pub fn new() -> Self {
+        let token: Vec<(TokenKind, u32)> = Vec::new();
+        Tokens { token, idx: 0, foremost: true, length: 0 }
+    }
+
+    pub fn len(&self) -> usize {
+        self.length
+    }
+
+    pub fn push(&mut self, kind: TokenKind, line: u32) {
+        self.length += 1;
+        self.token.push((kind, line));
+    }
+
+    pub fn reset(&mut self) {
+        self.foremost = true;
+        self.idx = 0;
+    }
+
+    pub fn consume(&mut self) -> Option<(TokenKind, u32)> {
+        if self.foremost {
+            self.foremost = false;
+            Some(self.token[0].clone())
+        } else {
+            if self.idx+1 < self.length {
+                self.idx += 1;
+                Some(self.token[self.idx].clone())
+            } else {
+                None
+            }
+        }
+    }
+
+    pub fn get_token(&self) -> (TokenKind, u32) {
+        self.token[self.idx].clone()
     }
 
     pub fn expect_instruction(&self) -> Result<InstructionKind, String> {
-        if let TokenKind::INSTRUCTION(k) = self.kind {
+        if let (TokenKind::INSTRUCTION(k), _) = self.token[self.idx] {
             Ok(k)
         } else {
-            Err(format!("{}: expect TokenKind::INSTRUCTION(InstructionKind). but got: {:?}",
-                self.line, self.kind))
+            let (kind, line) = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::INSTRUCTION(InstructionKind). but got: {:?}", line, kind))
         }
     }
 
     pub fn expect_register(&self) -> Result<usize, String> {
-        if let TokenKind::REGISTER(_, i) = self.kind {
+        if let (TokenKind::REGISTER(_, i), _) = self.token[self.idx] {
             Ok(i)
         } else {
-            Err(format!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}",
-                self.line, self.kind))
+            let (kind, line) = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}", line, kind))
         }
     }
 
     pub fn expect_integer(&self) -> Result<i32, String> {
-        if let TokenKind::INTEGER(i) = self.kind {
+        if let (TokenKind::INTEGER(i), _) = self.token[self.idx] {
             Ok(i)
         } else {
-            Err(format!("{}: expect TokenKind::INTEGER(i32). but got: {:?}",
-                self.line, self.kind))
+            let (kind, line) = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::INTEGER(i32). but got: {:?}", line, kind))
         }
     }
 
     pub fn expect_eol(&self) -> Result<(), String> {
-        if TokenKind::EOL == self.kind {
+        if let (TokenKind::EOL, _) = self.token[self.idx] {
             Ok(())
         } else {
-            Err(format!("{}: expect TokenKind::EOL. but got: {:?}",
-                self.line, self.kind))
+            let (kind, line) = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::EOL. but got: {:?}", line, kind))
         }
     }
 }
