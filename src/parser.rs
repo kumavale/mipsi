@@ -8,10 +8,18 @@ pub fn parse(mut tokens: VecDeque<Token>) {
 
     while let Some(token) = tokens.pop_front() {
         //print!("{:?}", token);
-        //if let == TokenKind::ADDRESS(String)
+
+        if let TokenKind::LABEL(_, _) = token.kind {
+            if let Some(token) = tokens.pop_front() {
+                token.expect_eol().unwrap();
+                continue;
+            }
+        }
+
         let instruction_kind = token.expect_instruction().unwrap();
 
         match instruction_kind {
+            // Arithmetic, Logic
             InstructionKind::ADD |
             InstructionKind::ADDI => {
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y);
@@ -22,6 +30,7 @@ pub fn parse(mut tokens: VecDeque<Token>) {
             InstructionKind::XOR  => {
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x ^ y);
             },
+            // Constant
             InstructionKind::LI  => {
                 if let Some(token) = tokens.pop_front() {
                     let register_idx = token.expect_register().unwrap();
@@ -34,6 +43,31 @@ pub fn parse(mut tokens: VecDeque<Token>) {
                     };
                 }
             },
+            // Comparison
+
+            // Branch, Jump
+            InstructionKind::BLT  => {
+                //tokens.pop_front();  // Rsrc1
+                //tokens.pop_front();  // Rsrc2
+                //tokens.pop_front();  // label
+                if let Some(token) = tokens.pop_front() {
+                    if let Ok(rsrc1_idx) = token.expect_register() {
+                        if let Some(token) = tokens.pop_front() {
+                            if let Ok(rsrc2_idx) = token.expect_register() {
+                                if let Some(token) = tokens.pop_front() {
+                                    if registers[rsrc1_idx] < registers[rsrc2_idx] {
+                                        // goto label
+                                        //I = token.expect_address();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            // Load, Store
+
+            // Transfer
             InstructionKind::MOVE  => {
                 if let Some(token) = tokens.pop_front() {
                     let register_idx = token.expect_register().unwrap();
@@ -47,6 +81,7 @@ pub fn parse(mut tokens: VecDeque<Token>) {
                     };
                 }
             },
+            // Exception, Interrupt
             InstructionKind::SYSCALL  => {
                 match registers[2] {                                 // v0
                     // print_int
@@ -56,22 +91,20 @@ pub fn parse(mut tokens: VecDeque<Token>) {
                     _ => (),
                 }
             },
-            //_ => (),
+            _ => (),
         }
 
         // expect TokenKind::EOL
         if let Some(token) = tokens.pop_front() {
-            if let Err(e) = token.expect_eol() {
-                panic!("{}", e);
-            }
+            token.expect_eol().unwrap();
         }
     }
 
     // Display all registers
+    //println!("\n[Display all registers]");
     //for (i, r) in registers.iter().enumerate() {
-    //    println!("registers[{}]: {}", i, r);
+    //    println!("${}: {}", i, r);
     //}
-
 }
 
 fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut VecDeque<Token>, fun: F)

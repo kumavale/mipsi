@@ -48,6 +48,10 @@ fn is_register(word: &&str) -> Result<(RegisterKind, usize), String> {
     Ok((register_kind, idx))
 }
 
+fn is_label(word: &&str) -> bool {
+    word.ends_with(":")
+}
+
 pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut VecDeque<Token>) {
     let line = line.replace(",", " ");
     let words: Vec<&str> = line.split_whitespace().collect();
@@ -75,13 +79,22 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut VecDeque<Token>) 
                 "LI"   => Token::new(TokenKind::INSTRUCTION(InstructionKind::LI),   number_of_lines),
                 // Comparison
                 // Branch, Jump
+                "BLT"  => Token::new(TokenKind::INSTRUCTION(InstructionKind::BLT),  number_of_lines),
                 // Load, Store
                 // Transfer
                 "MOVE" => Token::new(TokenKind::INSTRUCTION(InstructionKind::MOVE), number_of_lines),
                 // Exception, Interrupt
                 "SYSCALL" => Token::new(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), number_of_lines),
                 "#"    => break,
-                _ => panic!("{}: invalid token: {}", number_of_lines, word),
+                _ => {
+                    if is_label(&word) {
+                        let mut identifier = word.to_string();
+                        identifier.remove(identifier.len()-1);  // Delete ':'
+                        Token::new(TokenKind::LABEL(identifier, tokens.len()), number_of_lines)
+                    } else {
+                        Token::new(TokenKind::ADDRESS(word.to_string()), number_of_lines)
+                    }
+                },
             };
             tokens.push_back(t);
         }
@@ -97,14 +110,16 @@ fn test_tokenize() {
 
     let input = "\
 # This is comment.
-ADDI    $0,     $31,    256
-add	$t1,	$t2,	$t3
-SUB     $t4,    $t5,    $t6
-Xor     $t1,    $t1,    $t1
-LI      $v0,    1
-MOVE    $a0,    $t2
-syscall
-syscall  # Here is comment too
+main:
+    ADDI    $0,     $31,    256
+    add	$t1,	$t2,	$t3
+    SUB     $t4,    $t5,    $t6
+    Xor     $t1,    $t1,    $t1
+    LI      $v0,    1
+    MOVE    $a0,    $t2
+    syscall
+    syscall  # Here is comment too
+    BLT     $t0,    $t1,    label
 ";
 
     let mut tokens: VecDeque<Token> = VecDeque::new();
@@ -115,34 +130,51 @@ syscall  # Here is comment too
         buf.clear();
     }
 
-    assert_eq!(tokens[0].kind,  TokenKind::INSTRUCTION(InstructionKind::ADDI));
-    assert_eq!(tokens[1].kind,  TokenKind::REGISTER(RegisterKind::zero,  0));
-    assert_eq!(tokens[2].kind,  TokenKind::REGISTER(RegisterKind::ra,   31));
-    assert_eq!(tokens[3].kind,  TokenKind::INTEGER(256));
-    assert_eq!(tokens[4].kind,  TokenKind::EOL);
-    assert_eq!(tokens[5].kind,  TokenKind::INSTRUCTION(InstructionKind::ADD));
-    assert_eq!(tokens[6].kind,  TokenKind::REGISTER(RegisterKind::t1,  9));
-    assert_eq!(tokens[7].kind,  TokenKind::REGISTER(RegisterKind::t2, 10));
-    assert_eq!(tokens[8].kind,  TokenKind::REGISTER(RegisterKind::t3, 11));
-    assert_eq!(tokens[9].kind,  TokenKind::EOL);
-    assert_eq!(tokens[10].kind, TokenKind::INSTRUCTION(InstructionKind::SUB));
-    assert_eq!(tokens[11].kind, TokenKind::REGISTER(RegisterKind::t4, 12));
-    assert_eq!(tokens[12].kind, TokenKind::REGISTER(RegisterKind::t5, 13));
-    assert_eq!(tokens[13].kind, TokenKind::REGISTER(RegisterKind::t6, 14));
-    assert_eq!(tokens[14].kind, TokenKind::EOL);
-    assert_eq!(tokens[15].kind, TokenKind::INSTRUCTION(InstructionKind::XOR));
-    assert_eq!(tokens[16].kind, TokenKind::REGISTER(RegisterKind::t1, 9));
-    assert_eq!(tokens[17].kind, TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens[0].kind,  TokenKind::LABEL("main".to_string(), 0));
+    assert_eq!(tokens[1].kind,  TokenKind::EOL);
+    assert_eq!(tokens[2].kind,  TokenKind::INSTRUCTION(InstructionKind::ADDI));
+    assert_eq!(tokens[3].kind,  TokenKind::REGISTER(RegisterKind::zero,  0));
+    assert_eq!(tokens[4].kind,  TokenKind::REGISTER(RegisterKind::ra,   31));
+    assert_eq!(tokens[5].kind,  TokenKind::INTEGER(256));
+    assert_eq!(tokens[6].kind,  TokenKind::EOL);
+    assert_eq!(tokens[7].kind,  TokenKind::INSTRUCTION(InstructionKind::ADD));
+    assert_eq!(tokens[8].kind,  TokenKind::REGISTER(RegisterKind::t1,  9));
+    assert_eq!(tokens[9].kind,  TokenKind::REGISTER(RegisterKind::t2, 10));
+    assert_eq!(tokens[10].kind,  TokenKind::REGISTER(RegisterKind::t3, 11));
+    assert_eq!(tokens[11].kind,  TokenKind::EOL);
+    assert_eq!(tokens[12].kind, TokenKind::INSTRUCTION(InstructionKind::SUB));
+    assert_eq!(tokens[13].kind, TokenKind::REGISTER(RegisterKind::t4, 12));
+    assert_eq!(tokens[14].kind, TokenKind::REGISTER(RegisterKind::t5, 13));
+    assert_eq!(tokens[15].kind, TokenKind::REGISTER(RegisterKind::t6, 14));
+    assert_eq!(tokens[16].kind, TokenKind::EOL);
+    assert_eq!(tokens[17].kind, TokenKind::INSTRUCTION(InstructionKind::XOR));
     assert_eq!(tokens[18].kind, TokenKind::REGISTER(RegisterKind::t1, 9));
-    assert_eq!(tokens[19].kind, TokenKind::EOL);
-    assert_eq!(tokens[20].kind, TokenKind::INSTRUCTION(InstructionKind::LI));
-    assert_eq!(tokens[21].kind, TokenKind::REGISTER(RegisterKind::v0, 2));
-    assert_eq!(tokens[22].kind, TokenKind::INTEGER(1));
-    assert_eq!(tokens[23].kind, TokenKind::EOL);
-    assert_eq!(tokens[24].kind, TokenKind::INSTRUCTION(InstructionKind::MOVE));
-    assert_eq!(tokens[25].kind, TokenKind::REGISTER(RegisterKind::a0,  4));
-    assert_eq!(tokens[26].kind, TokenKind::REGISTER(RegisterKind::t2, 10));
-    assert_eq!(tokens[27].kind, TokenKind::EOL);
-    assert_eq!(tokens[28].kind, TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
+    assert_eq!(tokens[19].kind, TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens[20].kind, TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens[21].kind, TokenKind::EOL);
+    assert_eq!(tokens[22].kind, TokenKind::INSTRUCTION(InstructionKind::LI));
+    assert_eq!(tokens[23].kind, TokenKind::REGISTER(RegisterKind::v0, 2));
+    assert_eq!(tokens[24].kind, TokenKind::INTEGER(1));
+    assert_eq!(tokens[25].kind, TokenKind::EOL);
+    assert_eq!(tokens[26].kind, TokenKind::INSTRUCTION(InstructionKind::MOVE));
+    assert_eq!(tokens[27].kind, TokenKind::REGISTER(RegisterKind::a0,  4));
+    assert_eq!(tokens[28].kind, TokenKind::REGISTER(RegisterKind::t2, 10));
     assert_eq!(tokens[29].kind, TokenKind::EOL);
+    assert_eq!(tokens[30].kind, TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
+    assert_eq!(tokens[31].kind, TokenKind::EOL);
+    assert_eq!(tokens[32].kind, TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
+    assert_eq!(tokens[33].kind, TokenKind::EOL);
+    assert_eq!(tokens[34].kind, TokenKind::INSTRUCTION(InstructionKind::BLT));
+    assert_eq!(tokens[35].kind, TokenKind::REGISTER(RegisterKind::t0, 8));
+    assert_eq!(tokens[36].kind, TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens[37].kind, TokenKind::ADDRESS("label".to_string()));
+    assert_eq!(tokens[38].kind, TokenKind::EOL);
+
+    // `cargo test -- --nocapture`
+    for token in &tokens {
+        print!("{:?}", token);
+        if token.kind == TokenKind::EOL {
+            println!("");
+        }
+    }
 }

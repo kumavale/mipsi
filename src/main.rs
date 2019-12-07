@@ -23,13 +23,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         buf.clear();
     }
 
-    //for token in &tokens {
-    //    print!("{:?}", token);
-    //    if token.kind == TokenKind::EOL {
-    //        println!("");
-    //    }
-    //}
-
     parser::parse(tokens);
 
     Ok(())

@@ -12,6 +12,7 @@ pub enum InstructionKind {
     /// Comparison
 
     /// Branch, Jump
+    BLT,
 
     /// Load, Store
 
