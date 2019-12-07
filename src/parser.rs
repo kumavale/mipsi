@@ -26,7 +26,16 @@ pub fn parse(mut tokens: Tokens) {
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y),
             InstructionKind::MUL  =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y),
-            InstructionKind::XOR  =>
+            InstructionKind::DIV  =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x / y),
+            InstructionKind::AND |
+            InstructionKind::ANDI =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x & y),
+            InstructionKind::OR |
+            InstructionKind::ORI =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x | y),
+            InstructionKind::XOR |
+            InstructionKind::XORI =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x ^ y),
             // Constant
             InstructionKind::LI  => {
@@ -38,6 +47,18 @@ pub fn parse(mut tokens: Tokens) {
                             integer = tokens.expect_integer().unwrap();
                         }
                         integer
+                    };
+                }
+            },
+            InstructionKind::LUI  => {
+                if let Some(_) = tokens.consume() {
+                    let register_idx = tokens.expect_register().unwrap();
+                    registers[register_idx] = {
+                        let mut integer = 0;
+                        if let Some(_) = tokens.consume() {
+                            integer = tokens.expect_integer().unwrap();
+                        }
+                        integer & (std::i32::MAX - 65535)
                     };
                 }
             },
@@ -87,6 +108,18 @@ pub fn parse(mut tokens: Tokens) {
                     }
                 }
             },
+            InstructionKind::JALR => {
+                if let Some(_) = tokens.consume() {
+                    if let Ok(rs_idx) = tokens.expect_register() {
+                        tokens.consume();
+                        if let Ok(rd_idx) = tokens.expect_register() {
+                            registers[rd_idx] = tokens.idx() as i32 + 1;
+                            tokens.goto(rs_idx-1);
+                            continue;
+                        }
+                    }
+                }
+            },
 
             // Load, Store
 
@@ -116,7 +149,10 @@ pub fn parse(mut tokens: Tokens) {
                     _ => (),
                 }
             },
-            _ => (),
+            InstructionKind::NOP => {
+                // Do nothing
+            },
+            //_ => (),
         }
 
         // expect TokenKind::EOL

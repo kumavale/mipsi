@@ -72,9 +72,16 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "ADDI" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI), number_of_lines),
                 "SUB"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SUB),  number_of_lines),
                 "MUL"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::MUL),  number_of_lines),
+                "DIV"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::DIV),  number_of_lines),
+                "AND"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::AND),  number_of_lines),
+                "ANDI" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ANDI), number_of_lines),
+                "OR"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::OR),   number_of_lines),
+                "ORI"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ORI),  number_of_lines),
                 "XOR"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::XOR),  number_of_lines),
+                "XORI" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::XORI), number_of_lines),
                 // Constant
                 "LI"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LI),   number_of_lines),
+                "LUI"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LUI),  number_of_lines),
                 // Comparison
                 // Branch
                 "BLT"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLT),  number_of_lines),
@@ -82,11 +89,13 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "J"    => tokens.push(TokenKind::INSTRUCTION(InstructionKind::J),    number_of_lines),
                 "JAL"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JAL),  number_of_lines),
                 "JR"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JR),   number_of_lines),
+                "JALR" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JALR), number_of_lines),
                 // Load, Store
                 // Transfer
                 "MOVE" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::MOVE), number_of_lines),
                 // Exception, Interrupt
                 "SYSCALL" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), number_of_lines),
+                "NOP"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::NOP),  number_of_lines),
                 "#"    => break,
                 _ => {
                     if is_label(&word) {

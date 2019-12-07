@@ -1,32 +1,42 @@
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum InstructionKind {
     /// Arithmetic, Logic
-    ADD,
-    ADDI,
-    SUB,
-    MUL,
-    XOR,
+    ADD,   // Rd, Rs, Rt    | Rd = Rs + Rt
+    ADDI,  // Rt, Rs, Imm   | Rt = Rs + Imm
+    SUB,   // Rd, Rs, Rt    | Rd = Rs - Rt
+    MUL,   // Rd, Rs, Rt    | Rd = Rs * Rt
+    DIV,   // Rd, Rs, Rt    | Rd = Rs / Rt
+
+    AND,   // Rd, Rs, Rt    | Rd = Rs & Rt
+    ANDI,  // Rt, Rs, Imm   | Rt = Rs & Imm
+    OR,    // Rd, Rs, Rt    | Rd = Rs | Rt
+    ORI,   // Rt, Rs, Imm   | Rt = Rs | Imm
+    XOR,   // Rd, Rs, Rt    | Rd = Rs ^ Rt
+    XORI,  // Rt, Rs, Imm   | Rt = Rs ^ Imm
 
     /// Constant
-    LI,
+    LI,    // Rd, Imm       | Rd = Imm
+    LUI,   // Rt, Imm       | Rt[31:16] = Imm
 
     /// Comparison
 
     /// Branch
-    BLT,
+    BLT,   // Rs, Rt, label | goto label if Rs < Rt
 
     /// Jump
-    J,
-    JAL,
-    JR,
+    J,     // Target        | goto Target
+    JAL,   // Target        | $ra = next idx; goto Target
+    JR,    // Rs, Rd        | Rd = next idx; goto Rs
+    JALR,  // Rs            | goto Rs
 
     /// Load, Store
 
     /// Transfer
-    MOVE,
+    MOVE,  // Rd, Rs        | Rd = Rs
 
     /// Exception, Interrupt
-    SYSCALL,
+    SYSCALL,  //
+    NOP,      // Do nothing
 }
 
 #[derive(Clone, Debug, PartialEq)]
