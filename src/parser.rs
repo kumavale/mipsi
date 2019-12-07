@@ -42,24 +42,20 @@ pub fn parse(mut tokens: Tokens) {
 
             // Branch, Jump
             InstructionKind::BLT  => {
-                // TODO
-                tokens.consume();  // Rsrc1
-                tokens.consume();  // Rsrc2
-                tokens.consume();  // label
-                //if let Some(token) = tokens.pop_front() {
-                //    if let Ok(rsrc1_idx) = token.expect_register() {
-                //        if let Some(token) = tokens.pop_front() {
-                //            if let Ok(rsrc2_idx) = token.expect_register() {
-                //                if let Some(token) = tokens.pop_front() {
-                //                    if registers[rsrc1_idx] < registers[rsrc2_idx] {
-                //                        // goto label
-                //                        //I = token.expect_address();
-                //                    }
-                //                }
-                //            }
-                //        }
-                //    }
-                //}
+                if let Some(_) = tokens.consume() {
+                    if let Ok(rsrc1_idx) = tokens.expect_register() {
+                        if let Some(_) = tokens.consume() {
+                            if let Ok(rsrc2_idx) = tokens.expect_register() {
+                                if let Some(_) = tokens.consume() {
+                                    if registers[rsrc1_idx] < registers[rsrc2_idx] {
+                                        let idx = tokens.expect_address().unwrap();
+                                        tokens.goto(idx);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
             // Load, Store
 
@@ -87,7 +83,7 @@ pub fn parse(mut tokens: Tokens) {
                     _ => (),
                 }
             },
-            _ => (),
+            //_ => (),
         }
 
         // expect TokenKind::EOL
@@ -106,11 +102,11 @@ fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
 where
     F: Fn(i32, i32) -> i32,
 {
-    if let Some(token) = tokens.consume() {
+    if let Some(_) = tokens.consume() {
         if let Ok(rd_idx) = tokens.expect_register() {
             registers[rd_idx] = {
                 let mut r1 = 0;
-                if let Some(token) = tokens.consume() {
+                if let Some(_) = tokens.consume() {
                     if let Ok(register_idx) = tokens.expect_register() {
                         r1 = registers[register_idx];
                     } else if let Ok(num) = tokens.expect_integer() {
@@ -118,7 +114,7 @@ where
                     }
                 }
                 let mut r2 = 0;
-                if let Some(token) = tokens.consume() {
+                if let Some(_) = tokens.consume() {
                     if let Ok(register_idx) = tokens.expect_register() {
                         r2 = registers[register_idx];
                     } else if let Ok(num) = tokens.expect_integer() {
@@ -129,9 +125,6 @@ where
             };
         }
     }
-}
-
-fn update_idx(i: usize) {
 }
 
 #[test]
@@ -170,6 +163,18 @@ fn test_parse() {
     tokens.push(TokenKind::EOL, 28);
     tokens.push(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), 29);
     tokens.push(TokenKind::EOL, 30);
+    tokens.push(TokenKind::LABEL("loop".to_string(), 30), 31);
+    tokens.push(TokenKind::EOL, 32);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI), 33);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 34);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 35);
+    tokens.push(TokenKind::INTEGER(1), 36);
+    tokens.push(TokenKind::EOL, 37);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLT), 38);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 39);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 40);
+    tokens.push(TokenKind::ADDRESS("loop".to_string()), 41);
+    tokens.push(TokenKind::EOL, 42);
 
     parse(tokens);
 }

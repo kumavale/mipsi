@@ -98,6 +98,28 @@ impl Tokens {
         self.token[self.idx].clone()
     }
 
+    pub fn goto(&mut self, idx: usize) {
+        self.idx = idx;
+    }
+
+    /// Get index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
+    pub fn expect_address(&self) -> Result<usize, String> {
+        if let (TokenKind::ADDRESS(s), _) = self.token[self.idx].clone() {
+            for t in &self.token {
+                if let (TokenKind::LABEL(name, idx), _) = t {
+                    if &*s == &*name {
+                        return Ok(*idx);
+                    }
+                }
+            }
+            let (_, line) = self.token[self.idx];
+            Err(format!("{}: invalid address: {}", line, s))
+        } else {
+            let (kind, line) = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::ADDRESS(String). but got: {:?}", line, kind))
+        }
+    }
+
     pub fn expect_instruction(&self) -> Result<InstructionKind, String> {
         if let (TokenKind::INSTRUCTION(k), _) = self.token[self.idx] {
             Ok(k)
