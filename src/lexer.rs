@@ -75,8 +75,9 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 // Constant
                 "LI"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LI),   number_of_lines),
                 // Comparison
-                // Branch, Jump
+                // Branch
                 "BLT"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLT),  number_of_lines),
+                // Jump
                 // Load, Store
                 // Transfer
                 "MOVE" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::MOVE), number_of_lines),

@@ -1,6 +1,6 @@
 use super::token::*;
 
-pub fn parse(mut tokens: Tokens) {
+pub fn parse(mut tokens: Tokens) -> i32 {
 
     let mut registers = [0; 32];
     //let mut data: Vec<String> = vec![];
@@ -9,9 +9,10 @@ pub fn parse(mut tokens: Tokens) {
         //println!("{:?}", token);
 
         if let TokenKind::LABEL(_, _) = token.0 {
-            tokens.consume();
-            tokens.expect_eol().unwrap();
-            continue;
+            tokens.consume().unwrap();
+            if let Ok(_) = tokens.expect_eol() {
+                continue;
+            }
         }
 
         let instruction_kind = tokens.expect_instruction().unwrap();
@@ -40,7 +41,7 @@ pub fn parse(mut tokens: Tokens) {
             },
             // Comparison
 
-            // Branch, Jump
+            // Branch
             InstructionKind::BLT  => {
                 if let Some(_) = tokens.consume() {
                     if let Ok(rsrc1_idx) = tokens.expect_register() {
@@ -49,7 +50,8 @@ pub fn parse(mut tokens: Tokens) {
                                 if let Some(_) = tokens.consume() {
                                     if registers[rsrc1_idx] < registers[rsrc2_idx] {
                                         let idx = tokens.expect_address().unwrap();
-                                        tokens.goto(idx);
+                                        tokens.goto(idx-1);
+                                        continue;
                                     }
                                 }
                             }
@@ -57,6 +59,8 @@ pub fn parse(mut tokens: Tokens) {
                     }
                 }
             },
+            // Jump
+
             // Load, Store
 
             // Transfer
@@ -83,7 +87,7 @@ pub fn parse(mut tokens: Tokens) {
                     _ => (),
                 }
             },
-            //_ => (),
+            _ => (),
         }
 
         // expect TokenKind::EOL
@@ -96,6 +100,8 @@ pub fn parse(mut tokens: Tokens) {
     //for (i, r) in registers.iter().enumerate() {
     //    println!("${}: {}", i, r);
     //}
+
+    registers[31]  // $ra
 }
 
 fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
