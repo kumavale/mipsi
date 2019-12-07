@@ -22,11 +22,11 @@ pub fn parse(mut tokens: Tokens) {
             InstructionKind::ADD |
             InstructionKind::ADDI =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y),
-            InstructionKind::SUB  =>
+            InstructionKind::SUB =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y),
-            InstructionKind::MUL  =>
+            InstructionKind::MUL =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y),
-            InstructionKind::DIV  =>
+            InstructionKind::DIV =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x / y),
             InstructionKind::AND |
             InstructionKind::ANDI =>
@@ -37,35 +37,17 @@ pub fn parse(mut tokens: Tokens) {
             InstructionKind::XOR |
             InstructionKind::XORI =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x ^ y),
+
             // Constant
-            InstructionKind::LI  => {
-                if let Some(_) = tokens.consume() {
-                    let register_idx = tokens.expect_register().unwrap();
-                    registers[register_idx] = {
-                        let mut integer = 0;
-                        if let Some(_) = tokens.consume() {
-                            integer = tokens.expect_integer().unwrap();
-                        }
-                        integer
-                    };
-                }
-            },
-            InstructionKind::LUI  => {
-                if let Some(_) = tokens.consume() {
-                    let register_idx = tokens.expect_register().unwrap();
-                    registers[register_idx] = {
-                        let mut integer = 0;
-                        if let Some(_) = tokens.consume() {
-                            integer = tokens.expect_integer().unwrap();
-                        }
-                        integer & (std::i32::MAX - 65535)
-                    };
-                }
-            },
+            InstructionKind::LI =>
+                eval_constant(&mut registers, &mut tokens, |x| x),
+            InstructionKind::LUI =>
+                eval_constant(&mut registers, &mut tokens, |x| x & (std::i32::MAX - 65535)),
+
             // Comparison
 
             // Branch
-            InstructionKind::BLT  => {
+            InstructionKind::BLT => {
                 if let Some(_) = tokens.consume() {
                     if let Ok(rsrc1_idx) = tokens.expect_register() {
                         if let Some(_) = tokens.consume() {
@@ -82,49 +64,21 @@ pub fn parse(mut tokens: Tokens) {
                     }
                 }
             },
+
             // Jump
-            InstructionKind::J    => {
-                if let Some(_) = tokens.consume() {
-                    if let Ok(idx) = tokens.expect_address() {
-                        tokens.goto(idx-1);
-                        continue;
-                    }
-                }
-            },
-            InstructionKind::JAL  => {
-                if let Some(_) = tokens.consume() {
-                    if let Ok(idx) = tokens.expect_address() {
-                        registers[31] = tokens.idx() as i32 + 1;  // $ra
-                        tokens.goto(idx-1);
-                        continue;
-                    }
-                }
-            },
-            InstructionKind::JR   => {
-                if let Some(_) = tokens.consume() {
-                    if let Ok(idx) = tokens.expect_register() {
-                        tokens.goto(registers[idx] as usize);
-                        continue;
-                    }
-                }
-            },
-            InstructionKind::JALR => {
-                if let Some(_) = tokens.consume() {
-                    if let Ok(rs_idx) = tokens.expect_register() {
-                        tokens.consume();
-                        if let Ok(rd_idx) = tokens.expect_register() {
-                            registers[rd_idx] = tokens.idx() as i32 + 1;
-                            tokens.goto(rs_idx-1);
-                            continue;
-                        }
-                    }
-                }
-            },
+            InstructionKind::J =>
+                if eval_jump(&mut registers, &mut tokens, InstructionKind::J)    { continue; },
+            InstructionKind::JAL =>
+                if eval_jump(&mut registers, &mut tokens, InstructionKind::JAL)  { continue; },
+            InstructionKind::JR =>
+                if eval_jump(&mut registers, &mut tokens, InstructionKind::JR)   { continue; },
+            InstructionKind::JALR =>
+                if eval_jump(&mut registers, &mut tokens, InstructionKind::JALR) { continue; },
 
             // Load, Store
 
             // Transfer
-            InstructionKind::MOVE  => {
+            InstructionKind::MOVE => {
                 if let Some(_) = tokens.consume() {
                     let register_idx = tokens.expect_register().unwrap();
                     registers[register_idx] = {
@@ -137,8 +91,9 @@ pub fn parse(mut tokens: Tokens) {
                     };
                 }
             },
+
             // Exception, Interrupt
-            InstructionKind::SYSCALL  => {
+            InstructionKind::SYSCALL => {
                 match registers[2] {                                 // v0
                     // print_int
                     1  => print!("{}", registers[4]),                 // a0
@@ -149,9 +104,7 @@ pub fn parse(mut tokens: Tokens) {
                     _ => (),
                 }
             },
-            InstructionKind::NOP => {
-                // Do nothing
-            },
+            InstructionKind::NOP => (),  // Do nothing
             //_ => (),
         }
 
@@ -200,6 +153,64 @@ where
             };
         }
     }
+}
+
+fn eval_constant<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
+where
+    F: Fn(i32) -> i32,
+{
+    if let Some(_) = tokens.consume() {
+        let register_idx = tokens.expect_register().unwrap();
+        registers[register_idx] = {
+            let mut integer = 0;
+            if let Some(_) = tokens.consume() {
+                integer = tokens.expect_integer().unwrap();
+            }
+            fun(integer)
+        };
+    }
+}
+
+/// Return: can continue
+fn eval_jump(registers: &mut [i32], tokens: &mut Tokens, kind: InstructionKind) -> bool {
+    match kind {
+        InstructionKind::J =>
+            if let Some(_) = tokens.consume() {
+                if let Ok(idx) = tokens.expect_address() {
+                    tokens.goto(idx-1);
+                    return true;
+                }
+            },
+        InstructionKind::JAL =>
+            if let Some(_) = tokens.consume() {
+                if let Ok(idx) = tokens.expect_address() {
+                    registers[31] = tokens.idx() as i32 + 1;  // $ra
+                    tokens.goto(idx-1);
+                    return true;
+                }
+            },
+        InstructionKind::JR =>
+            if let Some(_) = tokens.consume() {
+                if let Ok(idx) = tokens.expect_register() {
+                    tokens.goto(registers[idx] as usize);
+                    return true;
+                }
+            },
+        InstructionKind::JALR =>
+            if let Some(_) = tokens.consume() {
+                if let Ok(rs_idx) = tokens.expect_register() {
+                    tokens.consume();
+                    if let Ok(rd_idx) = tokens.expect_register() {
+                        registers[rd_idx] = tokens.idx() as i32 + 1;
+                        tokens.goto(rs_idx-1);
+                        return true;
+                    }
+                }
+            },
+        _ => panic!("eval_jump(): invalid InstructionKind: {:?}", kind),
+    }
+
+    false
 }
 
 #[test]
