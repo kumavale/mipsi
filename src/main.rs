@@ -24,8 +24,6 @@ fn main() {
         buf.clear();
     }
 
-    let ra = parser::parse(tokens);
-
-    std::process::exit(ra);
+    parser::parse(tokens);
 }
 

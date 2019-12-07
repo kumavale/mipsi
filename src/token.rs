@@ -4,6 +4,7 @@ pub enum InstructionKind {
     ADD,
     ADDI,
     SUB,
+    MUL,
     XOR,
 
     /// Constant
@@ -65,6 +66,7 @@ pub struct Tokens {
 
 //pub type Token = (TokenKind, u32);
 
+#[allow(dead_code)]
 impl Tokens {
     pub fn new() -> Self {
         let token: Vec<(TokenKind, u32)> = Vec::new();
@@ -105,6 +107,10 @@ impl Tokens {
 
     pub fn goto(&mut self, idx: usize) {
         self.idx = idx;
+    }
+
+    pub fn idx(&self) -> usize {
+        self.idx
     }
 
     /// Get index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()

@@ -71,6 +71,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "ADD"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADD),  number_of_lines),
                 "ADDI" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI), number_of_lines),
                 "SUB"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SUB),  number_of_lines),
+                "MUL"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::MUL),  number_of_lines),
                 "XOR"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::XOR),  number_of_lines),
                 // Constant
                 "LI"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LI),   number_of_lines),
@@ -78,6 +79,9 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 // Branch
                 "BLT"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLT),  number_of_lines),
                 // Jump
+                "J"    => tokens.push(TokenKind::INSTRUCTION(InstructionKind::J),    number_of_lines),
+                "JAL"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JAL),  number_of_lines),
+                "JR"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JR),   number_of_lines),
                 // Load, Store
                 // Transfer
                 "MOVE" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::MOVE), number_of_lines),
@@ -117,6 +121,10 @@ main:
     syscall
     syscall  # Here is comment too
     BLT     $t0,    $t1,    label
+    mul     $t4,    $t5,    $t6
+    J       hoge
+    JAL     fuga
+    JR      $ra
 ";
 
     let mut tokens: Tokens = Tokens::new();
@@ -165,6 +173,20 @@ main:
     assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t0, 8));
     assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t1, 9));
     assert_eq!(tokens.consume().unwrap().0, TokenKind::ADDRESS("label".to_string()));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::MUL));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t4, 12));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t5, 13));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t6, 14));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::J));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::ADDRESS("hoge".to_string()));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::JAL));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::ADDRESS("fuga".to_string()));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::JR));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::ra, 31));
     assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
 
     // `cargo test -- --nocapture`

@@ -1,6 +1,6 @@
 use super::token::*;
 
-pub fn parse(mut tokens: Tokens) -> i32 {
+pub fn parse(mut tokens: Tokens) {
 
     let mut registers = [0; 32];
     //let mut data: Vec<String> = vec![];
@@ -24,6 +24,8 @@ pub fn parse(mut tokens: Tokens) -> i32 {
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y),
             InstructionKind::SUB  =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y),
+            InstructionKind::MUL  =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y),
             InstructionKind::XOR  =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x ^ y),
             // Constant
@@ -60,6 +62,31 @@ pub fn parse(mut tokens: Tokens) -> i32 {
                 }
             },
             // Jump
+            InstructionKind::J    => {
+                if let Some(_) = tokens.consume() {
+                    if let Ok(idx) = tokens.expect_address() {
+                        tokens.goto(idx-1);
+                        continue;
+                    }
+                }
+            },
+            InstructionKind::JAL  => {
+                if let Some(_) = tokens.consume() {
+                    if let Ok(idx) = tokens.expect_address() {
+                        registers[31] = tokens.idx() as i32 + 1;  // $ra
+                        tokens.goto(idx-1);
+                        continue;
+                    }
+                }
+            },
+            InstructionKind::JR   => {
+                if let Some(_) = tokens.consume() {
+                    if let Ok(idx) = tokens.expect_register() {
+                        tokens.goto(registers[idx] as usize);
+                        continue;
+                    }
+                }
+            },
 
             // Load, Store
 
@@ -81,9 +108,11 @@ pub fn parse(mut tokens: Tokens) -> i32 {
             InstructionKind::SYSCALL  => {
                 match registers[2] {                                 // v0
                     // print_int
-                    1 => print!("{}", registers[4]),                 // a0
+                    1  => print!("{}", registers[4]),                 // a0
                     // print_string
-                    //4 => print!("{}", data[registers[4] as usize]),  // a0
+                    //4  => print!("{}", data[registers[4] as usize]),  // a0
+                    // exit
+                    10 => break,
                     _ => (),
                 }
             },
@@ -96,12 +125,16 @@ pub fn parse(mut tokens: Tokens) -> i32 {
     }
 
     // Display all registers
-    //println!("\n[Display all registers]");
-    //for (i, r) in registers.iter().enumerate() {
-    //    println!("${}: {}", i, r);
-    //}
-
-    registers[31]  // $ra
+    // `DEBUG=1 cargo run`
+    if std::env::var("DEBUG").is_ok() {
+        println!("\n[Display all registers]");
+        for i in 0..8 {
+            for j in 0..4 {
+                print!("${:<2}:0x{:08x}\t", i+j*8, registers[i+j*8]);
+            }
+            println!("");
+        }
+    }
 }
 
 fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
@@ -181,6 +214,17 @@ fn test_parse() {
     tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 40);
     tokens.push(TokenKind::ADDRESS("loop".to_string()), 41);
     tokens.push(TokenKind::EOL, 42);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::MUL), 43);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t4, 12), 44);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t5, 13), 45);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t6, 14), 46);
+    tokens.push(TokenKind::EOL, 47);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::J), 48);
+    tokens.push(TokenKind::ADDRESS("hoge".to_string()), 49);
+    tokens.push(TokenKind::EOL, 50);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::JAL), 51);
+    tokens.push(TokenKind::ADDRESS("fuga".to_string()), 52);
+    tokens.push(TokenKind::EOL, 53);
 
     parse(tokens);
 }
