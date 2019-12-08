@@ -48,7 +48,7 @@ fn is_register(word: &str) -> Result<(RegisterKind, usize), String> {
 }
 
 /// [0-9]?[0-9]* \( `is_register` \)
-fn is_stack(word: &str) -> Result<(RegisterKind, usize, usize), String> {
+fn is_stack(word: &str) -> Result<(RegisterKind, usize, i32), String> {
     let errmsg = format!("is_stack(): not stack identifier: {}", word);
     if Some(')') != word.chars().nth(word.len()-1) {
         return  Err(errmsg);
@@ -68,7 +68,7 @@ fn is_stack(word: &str) -> Result<(RegisterKind, usize, usize), String> {
                     reg = format!("{}{}", reg, c);
                 }
                 let (reg, idx) = is_register(&reg)?;
-                return Ok((reg, idx, add as usize));
+                return Ok((reg, idx, add));
             } else {
                 break;
             }
@@ -177,6 +177,8 @@ main:
     JAL     fuga
     JR      $ra
     ($sp)   0($t0)  20($t1)
+    ##### SYSCALL ##### J J J
+    NOP
 ";
 
     let mut tokens: Tokens = Tokens::new();
@@ -243,6 +245,8 @@ main:
     assert_eq!(tokens.consume().unwrap().0, TokenKind::STACK(RegisterKind::sp, 29,  0));
     assert_eq!(tokens.consume().unwrap().0, TokenKind::STACK(RegisterKind::t0,  8,  0));
     assert_eq!(tokens.consume().unwrap().0, TokenKind::STACK(RegisterKind::t1,  9, 20));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::NOP));
     assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
 
     // `cargo test -- --nocapture`

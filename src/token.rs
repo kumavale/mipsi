@@ -68,12 +68,12 @@ pub enum RegisterKind {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
     INSTRUCTION(InstructionKind),
-    INTEGER(i32),                       // Immediate
-    REGISTER(RegisterKind, usize),      // (_, Index)
-    STACK(RegisterKind, usize, usize),  // (_, Append index)
-    LABEL(String, usize),               // (Literal, Index)
-    ADDRESS(String),                    // Literal
-    EOL,                                // End of Line
+    INTEGER(i32),                     // Immediate
+    REGISTER(RegisterKind, usize),    // (_, Index)
+    STACK(RegisterKind, usize, i32),  // (_, Append index)
+    LABEL(String, usize),             // (Literal, Index)
+    ADDRESS(String),                  // Literal
+    EOL,                              // End of Line
 }
 
 #[derive(Debug)]
@@ -125,19 +125,6 @@ impl Tokens {
         self.token[self.idx].clone()
     }
 
-    pub fn get_stack_capacity(&mut self) -> usize {
-        let mut max_capacity = 0;
-        while let Some(token) = self.consume() {
-            if let TokenKind::STACK(_, _, a) = token.0 {
-                if max_capacity < a {
-                    max_capacity = a;
-                }
-            }
-        }
-        self.reset();
-        max_capacity
-    }
-
     pub fn goto(&mut self, idx: usize) {
         self.idx = idx;
     }
@@ -182,7 +169,8 @@ impl Tokens {
         }
     }
 
-    pub fn expect_stack(&self) -> Result<(usize, usize), String> {
+    /// Return: Ok((register_idx, append idx))
+    pub fn expect_stack(&self) -> Result<(usize, i32), String> {
         if let (TokenKind::STACK(_, i, j), _) = self.token[self.idx] {
             Ok((i, j))
         } else {

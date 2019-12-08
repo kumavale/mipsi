@@ -24,8 +24,6 @@ fn main() {
         buf.clear();
     }
 
-    let stack_capacity = tokens.get_stack_capacity();
-
-    parser::parse(tokens, stack_capacity);
+    parser::parse(tokens);
 }
 

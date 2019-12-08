@@ -1,9 +1,9 @@
 use super::token::*;
 
-pub fn parse(mut tokens: Tokens, stack_capacity: usize) {
+pub fn parse(mut tokens: Tokens) {
 
     let mut registers = [0; 32];
-    let mut stack = vec![0; stack_capacity+1+1000]; // TODO
+    let mut stack = Vec::new();
     //let mut data: Vec<String> = vec![];
 
     while let Some(token) = tokens.consume() {
@@ -74,7 +74,11 @@ pub fn parse(mut tokens: Tokens, stack_capacity: usize) {
                     registers[register_idx] = {
                         tokens.consume().unwrap();
                         let (r_idx, s_idx) = tokens.expect_stack().unwrap();
-                        stack[registers[r_idx] as usize + s_idx/4]
+                        let stack_idx = -(registers[r_idx] + s_idx/4) as usize;
+                        if stack.len() <= stack_idx {
+                            stack.resize(stack_idx, 0);
+                        }
+                        stack[stack_idx]
                     };
                 }
             },
@@ -83,7 +87,11 @@ pub fn parse(mut tokens: Tokens, stack_capacity: usize) {
                     let register_idx = tokens.expect_register().unwrap();
                     tokens.consume().unwrap();
                     let (r_idx, s_idx) = tokens.expect_stack().unwrap();
-                    stack[registers[r_idx] as usize + s_idx/4] = registers[register_idx];
+                    let stack_idx = -(registers[r_idx] + s_idx/4) as usize;
+                    if stack.len() <= stack_idx {
+                        stack.resize(stack_idx+1, 0);
+                    }
+                    stack[stack_idx] = registers[register_idx];
                 }
             },
 
@@ -323,8 +331,11 @@ fn test_parse() {
     tokens.push(TokenKind::INSTRUCTION(InstructionKind::JAL), 51);
     tokens.push(TokenKind::ADDRESS("fuga".to_string()), 52);
     tokens.push(TokenKind::EOL, 53);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SW), 54);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t4, 12), 55);
+    tokens.push(TokenKind::STACK(RegisterKind::sp, 29, 0), 56);
+    tokens.push(TokenKind::EOL, 57);
 
-    let stack_capacity = 100;
-    parse(tokens, stack_capacity);
+    parse(tokens);
 }
 
