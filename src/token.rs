@@ -22,7 +22,7 @@ pub enum InstructionKind {
 
     /// Branch
     //B,     // label         | goto label
-    //BEQ,   // Rs, Rt, label | goto label if Rs == Rt
+    BEQ,   // Rs, Rt, label | goto label if Rs == Rt
     //BGE,   // Rs, Rt, label | goto label if Rs >= Rt
     //BGT,   // Rs, Rt, label | goto label if Rs > Rt
     BLE,   // Rs, Rt, label | goto label if Rs <= Rt
@@ -125,6 +125,19 @@ impl Tokens {
         self.token[self.idx].clone()
     }
 
+    pub fn get_stack_capacity(&mut self) -> usize {
+        let mut max_capacity = 0;
+        while let Some(token) = self.consume() {
+            if let TokenKind::STACK(_, _, a) = token.0 {
+                if max_capacity < a {
+                    max_capacity = a;
+                }
+            }
+        }
+        self.reset();
+        max_capacity
+    }
+
     pub fn goto(&mut self, idx: usize) {
         self.idx = idx;
     }
@@ -166,6 +179,15 @@ impl Tokens {
         } else {
             let (kind, line) = self.token[self.idx].clone();
             Err(format!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}", line, kind))
+        }
+    }
+
+    pub fn expect_stack(&self) -> Result<(usize, usize), String> {
+        if let (TokenKind::STACK(_, i, j), _) = self.token[self.idx] {
+            Ok((i, j))
+        } else {
+            let (kind, line) = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::STACK(RegisterKind, usize, usize). but got: {:?}", line, kind))
         }
     }
 

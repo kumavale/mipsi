@@ -1,12 +1,13 @@
 use super::token::*;
 
-pub fn parse(mut tokens: Tokens) {
+pub fn parse(mut tokens: Tokens, stack_capacity: usize) {
 
     let mut registers = [0; 32];
+    let mut stack = vec![0; stack_capacity+1+1000]; // TODO
     //let mut data: Vec<String> = vec![];
 
     while let Some(token) = tokens.consume() {
-        //println!("{:?}", token);
+        //println!("{:?}", token); continue;
 
         if let TokenKind::LABEL(_, _) = token.0 {
             tokens.consume().unwrap();
@@ -47,25 +48,12 @@ pub fn parse(mut tokens: Tokens) {
             // Comparison
 
             // Branch
-            InstructionKind::BLE => {
-            },
-            InstructionKind::BLT => {
-                if let Some(_) = tokens.consume() {
-                    if let Ok(rsrc1_idx) = tokens.expect_register() {
-                        if let Some(_) = tokens.consume() {
-                            if let Ok(rsrc2_idx) = tokens.expect_register() {
-                                if let Some(_) = tokens.consume() {
-                                    if registers[rsrc1_idx] < registers[rsrc2_idx] {
-                                        let idx = tokens.expect_address().unwrap();
-                                        tokens.goto(idx-1);
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
+            InstructionKind::BEQ =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x == y) { continue; },
+            InstructionKind::BLE =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y) { continue; },
+            InstructionKind::BLT =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)  { continue; },
 
             // Jump
             InstructionKind::J =>
@@ -81,8 +69,22 @@ pub fn parse(mut tokens: Tokens) {
             InstructionKind::LA => {
             },
             InstructionKind::LW => {
+                if let Some(_) = tokens.consume() {
+                    let register_idx = tokens.expect_register().unwrap();
+                    registers[register_idx] = {
+                        tokens.consume().unwrap();
+                        let (r_idx, s_idx) = tokens.expect_stack().unwrap();
+                        stack[registers[r_idx] as usize + s_idx/4]
+                    };
+                }
             },
             InstructionKind::SW => {
+                if let Some(_) = tokens.consume() {
+                    let register_idx = tokens.expect_register().unwrap();
+                    tokens.consume().unwrap();
+                    let (r_idx, s_idx) = tokens.expect_stack().unwrap();
+                    stack[registers[r_idx] as usize + s_idx/4] = registers[register_idx];
+                }
             },
 
             // Transfer
@@ -102,13 +104,23 @@ pub fn parse(mut tokens: Tokens) {
 
             // Exception, Interrupt
             InstructionKind::SYSCALL => {
-                match registers[2] {                                 // v0
+                match registers[2] {  // v0
                     // print_int
-                    1  => print!("{}", registers[4]),                 // a0
+                    1  => print!("{}", registers[4]),  // a0
                     // print_string
                     //4  => print!("{}", data[registers[4] as usize]),  // a0
+                    // read_int
+                    5  => {
+                        let mut input = String::new();
+                        std::io::stdin().read_line(&mut input).unwrap();
+                        registers[2] = input.trim().parse::<i32>().unwrap();
+                    },
                     // exit
                     10 => break,
+
+                    // My define
+                    // print_int + '\n'
+                    11  => println!("{}", registers[4]),  // a0
                     _ => (),
                 }
             },
@@ -177,6 +189,37 @@ where
             fun(integer)
         };
     }
+}
+
+fn eval_branch<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F) -> bool
+where
+    F: Fn(i32, i32) -> bool,
+{
+    if let Some(_) = tokens.consume() {
+        if let Ok(rsrc1_idx) = tokens.expect_register() {
+            if let Some(_) = tokens.consume() {
+                if let Ok(rsrc2_idx) = tokens.expect_register() {
+                    if let Some(_) = tokens.consume() {
+                        if fun(registers[rsrc1_idx], registers[rsrc2_idx]) {
+                            let idx = tokens.expect_address().unwrap();
+                            tokens.goto(idx-1);
+                            return true;
+                        }
+                    }
+                } else if let Ok(num) = tokens.expect_integer() {
+                    if let Some(_) = tokens.consume() {
+                        if fun(registers[rsrc1_idx], num) {
+                            let idx = tokens.expect_address().unwrap();
+                            tokens.goto(idx-1);
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    false
 }
 
 /// Return: can continue
@@ -281,6 +324,7 @@ fn test_parse() {
     tokens.push(TokenKind::ADDRESS("fuga".to_string()), 52);
     tokens.push(TokenKind::EOL, 53);
 
-    parse(tokens);
+    let stack_capacity = 100;
+    parse(tokens, stack_capacity);
 }
 

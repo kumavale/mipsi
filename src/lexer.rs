@@ -77,8 +77,12 @@ fn is_stack(word: &str) -> Result<(RegisterKind, usize, usize), String> {
     Err(errmsg)
 }
 
-fn is_label(word: &&str) -> bool {
+fn is_label(word: &str) -> bool {
     word.ends_with(":")
+}
+
+fn is_comment(word: &str) -> bool {
+    word.starts_with("#")
 }
 
 pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
@@ -86,7 +90,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
     let words: Vec<&str> = line.split_whitespace().collect();
 
     // Skip blank line either comment line
-    if words.len() == 0 || words.len() > 0 && words[0] == "#" {
+    if words.len() == 0 || words.len() > 0 && words[0].starts_with("#") {
         return;
     }
 
@@ -97,6 +101,8 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
             tokens.push(TokenKind::REGISTER(k, i), number_of_lines);
         } else if let Ok((k, i, a)) = is_stack(&word) {
             tokens.push(TokenKind::STACK(k, i, a), number_of_lines);
+        } else if is_comment(&word) {
+            break;
         } else {
             match &*word.to_ascii_uppercase() {
                 // Arithmetic, Logic
@@ -116,6 +122,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "LUI"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LUI),  number_of_lines),
                 // Comparison
                 // Branch
+                "BEQ"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BEQ),  number_of_lines),
                 "BLE"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLE),  number_of_lines),
                 "BLT"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLT),  number_of_lines),
                 // Jump
@@ -132,7 +139,6 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 // Exception, Interrupt
                 "SYSCALL" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), number_of_lines),
                 "NOP"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::NOP),  number_of_lines),
-                "#"    => break,
                 _ => {
                     if is_label(&word) {
                         let mut identifier = word.to_string();
