@@ -47,6 +47,8 @@ pub fn parse(mut tokens: Tokens) {
             // Comparison
 
             // Branch
+            InstructionKind::BLE => {
+            },
             InstructionKind::BLT => {
                 if let Some(_) = tokens.consume() {
                     if let Ok(rsrc1_idx) = tokens.expect_register() {
@@ -76,6 +78,12 @@ pub fn parse(mut tokens: Tokens) {
                 if eval_jump(&mut registers, &mut tokens, InstructionKind::JALR) { continue; },
 
             // Load, Store
+            InstructionKind::LA => {
+            },
+            InstructionKind::LW => {
+            },
+            InstructionKind::SW => {
+            },
 
             // Transfer
             InstructionKind::MOVE => {

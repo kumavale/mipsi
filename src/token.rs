@@ -21,7 +21,13 @@ pub enum InstructionKind {
     /// Comparison
 
     /// Branch
+    //B,     // label         | goto label
+    //BEQ,   // Rs, Rt, label | goto label if Rs == Rt
+    //BGE,   // Rs, Rt, label | goto label if Rs >= Rt
+    //BGT,   // Rs, Rt, label | goto label if Rs > Rt
+    BLE,   // Rs, Rt, label | goto label if Rs <= Rt
     BLT,   // Rs, Rt, label | goto label if Rs < Rt
+    //BNEZ,  // Rs, Rt, label | goto label if Rs != 0
 
     /// Jump
     J,     // Target        | goto Target
@@ -30,6 +36,9 @@ pub enum InstructionKind {
     JALR,  // Rs            | goto Rs
 
     /// Load, Store
+    LA,    // Rd, address   | Rt = idx(stack)
+    LW,    // Rt, address   | Rt = stack[idx]
+    SW,    // Rt, address   | stack[idx] = Rt
 
     /// Transfer
     MOVE,  // Rd, Rs        | Rd = Rs
@@ -59,19 +68,20 @@ pub enum RegisterKind {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
     INSTRUCTION(InstructionKind),
-    INTEGER(i32),
-    REGISTER(RegisterKind, usize),  // (_, index)
-    LABEL(String, usize),           // (literal, index)
-    ADDRESS(String),                // literal
-    EOL,                            // End of Line
+    INTEGER(i32),                       // Immediate
+    REGISTER(RegisterKind, usize),      // (_, Index)
+    STACK(RegisterKind, usize, usize),  // (_, Append index)
+    LABEL(String, usize),               // (Literal, Index)
+    ADDRESS(String),                    // Literal
+    EOL,                                // End of Line
 }
 
 #[derive(Debug)]
 pub struct Tokens {
-    token: Vec<(TokenKind, u32)>,   // (TokenKind, number of lines)
-    idx: usize,                     // Current index
-    foremost: bool,                 // Foremost
-    length: usize,                     // Token length
+    token: Vec<(TokenKind, u32)>,  // (TokenKind, number of lines)
+    idx: usize,                    // Current index
+    foremost: bool,                // Foremost
+    length: usize,                 // Token length
 }
 
 //pub type Token = (TokenKind, u32);

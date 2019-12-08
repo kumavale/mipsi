@@ -1,6 +1,6 @@
 use super::token::*;
 
-fn is_register(word: &&str) -> Result<(RegisterKind, usize), String> {
+fn is_register(word: &str) -> Result<(RegisterKind, usize), String> {
     if word.as_bytes()[0] != b'$' {
         return Err(format!("Invalid register name: {}", word));
     }
@@ -41,10 +41,40 @@ fn is_register(word: &&str) -> Result<(RegisterKind, usize), String> {
         "sp"   | "29" => (RegisterKind::sp,  29),
         "fp"   | "30" => (RegisterKind::fp,  30),
         "ra"   | "31" => (RegisterKind::ra,  31),
-        _ => return Err(format!("Invalid register name: {}", word)),
+        _ => return Err(format!("is_register(): invalid register name: {}", word)),
     };
 
     Ok((register_kind, idx))
+}
+
+/// [0-9]?[0-9]* \( `is_register` \)
+fn is_stack(word: &str) -> Result<(RegisterKind, usize, usize), String> {
+    let errmsg = format!("is_stack(): not stack identifier: {}", word);
+    if Some(')') != word.chars().nth(word.len()-1) {
+        return  Err(errmsg);
+    }
+    let mut add = 0;
+    let mut s = word.clone().to_string();
+    s.remove(s.len()-1);  // Delete ')'
+    let mut s_chars = s.chars();
+    while let Some(c) = s_chars.next() {
+        let num = c as i32 - 48;
+        if 0 <= num && num <= 9 {
+            add = add * 10 + num;
+        } else {
+            if c == '(' {
+                let mut reg = String::new();
+                while let Some(c) = s_chars.next() {
+                    reg = format!("{}{}", reg, c);
+                }
+                let (reg, idx) = is_register(&reg)?;
+                return Ok((reg, idx, add as usize));
+            } else {
+                break;
+            }
+        }
+    }
+    Err(errmsg)
 }
 
 fn is_label(word: &&str) -> bool {
@@ -65,6 +95,8 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
             tokens.push(TokenKind::INTEGER(num), number_of_lines);
         } else if let Ok((k, i)) = is_register(&word) {
             tokens.push(TokenKind::REGISTER(k, i), number_of_lines);
+        } else if let Ok((k, i, a)) = is_stack(&word) {
+            tokens.push(TokenKind::STACK(k, i, a), number_of_lines);
         } else {
             match &*word.to_ascii_uppercase() {
                 // Arithmetic, Logic
@@ -84,6 +116,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "LUI"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LUI),  number_of_lines),
                 // Comparison
                 // Branch
+                "BLE"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLE),  number_of_lines),
                 "BLT"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLT),  number_of_lines),
                 // Jump
                 "J"    => tokens.push(TokenKind::INSTRUCTION(InstructionKind::J),    number_of_lines),
@@ -91,6 +124,9 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "JR"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JR),   number_of_lines),
                 "JALR" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JALR), number_of_lines),
                 // Load, Store
+                "LA"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LA),   number_of_lines),
+                "LW"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LW),   number_of_lines),
+                "SW"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SW),   number_of_lines),
                 // Transfer
                 "MOVE" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::MOVE), number_of_lines),
                 // Exception, Interrupt
@@ -129,11 +165,12 @@ main:
     MOVE    $a0,    $t2
     syscall
     syscall  # Here is comment too
-    BLT     $t0,    $t1,    label
-    mul     $t4,    $t5,    $t6
+    BLT     $t0,$t1,label
+    mul     $t4,$t5,$t6
     J       hoge
     JAL     fuga
     JR      $ra
+    ($sp)   0($t0)  20($t1)
 ";
 
     let mut tokens: Tokens = Tokens::new();
@@ -196,6 +233,10 @@ main:
     assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
     assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::JR));
     assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::ra, 31));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::STACK(RegisterKind::sp, 29,  0));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::STACK(RegisterKind::t0,  8,  0));
+    assert_eq!(tokens.consume().unwrap().0, TokenKind::STACK(RegisterKind::t1,  9, 20));
     assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
 
     // `cargo test -- --nocapture`
