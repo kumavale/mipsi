@@ -1,14 +1,23 @@
 # Very Small MIPS Interpreter
+A MIPS interpreter(simulator) written in Rust.
 
 ## Supported
 - [ ] Arithmetic, Logic
-    - [ ] ADD
-    - [ ] ADDI
-    - [ ] SUB
-    - [ ] XOR
-- [ ] Constant
-    - [ ] LUI
-    - [ ] LI
+    - [x] ADD
+    - [x] ADDI
+    - [x] SUB
+    - [x] MUL
+    - [x] DIV
+    - [x] AND
+    - [x] ANDI
+    - [x] OR
+    - [x] ORI
+    - [x] XOR
+    - [x] XORI
+    - [ ] NOT
+- [x] Constant
+    - [x] LI
+    - [x] LUI
 - [ ] Comparison
     - [ ] SLT
     - [ ] SLTI
@@ -17,19 +26,28 @@
     - [ ] SGT
     - [ ] SLE
     - [ ] SNE
-- [ ] Branch, Jump
-    - [ ] BEQ
+- [ ] Branch
+    - [ ] B
+    - [x] BEQ
+    - [ ] BGE
+    - [ ] BGT
+    - [x] BLE
+    - [x] BLT
     - [ ] BNE
+    - [ ] BNEZ
     - [ ] SLT
-    - [ ] J
-    - [ ] JR
+- [x] Jump
+    - [x] J
+    - [x] JAL
+    - [x] JR
+    - [x] JALR
 - [ ] Load, Store
     - [ ] LA
     - [ ] LI
-    - [ ] LW
-    - [ ] SW
+    - [x] LW
+    - [x] SW
 - [ ] Transfer
-    - [ ] MOVE
+    - [x] MOVE
     - [ ] MFHI
     - [ ] MFLO
     - [ ] MTHI
@@ -38,6 +56,12 @@
     - [ ] MOVZ
 - [ ] Exception, Interrupt
     - [ ] SYSCALL
+        - [x]  1: print_int
+        - [ ]  4: print_string
+        - [x]  5: read_int
+        - [x] 10: exit
+    - [ ] SYSCALL(own syscall)
+        - [x] 11: print_int + '\n'
     - [ ] BREAK
-    - [ ] BOP
+    - [x] BOP
 
