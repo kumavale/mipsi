@@ -46,6 +46,19 @@ pub fn parse(mut tokens: Tokens) {
                 eval_constant(&mut registers, &mut tokens, |x| x & (std::i32::MAX - 65535)),
 
             // Comparison
+            InstructionKind::SLT |
+            InstructionKind::SLTI =>
+                eval_comparison(&mut registers, &mut tokens, |x, y| x < y),
+            InstructionKind::SEQ =>
+                eval_comparison(&mut registers, &mut tokens, |x, y| x == y),
+            InstructionKind::SGE =>
+                eval_comparison(&mut registers, &mut tokens, |x, y| x >= y),
+            InstructionKind::SGT =>
+                eval_comparison(&mut registers, &mut tokens, |x, y| x > y),
+            InstructionKind::SLE =>
+                eval_comparison(&mut registers, &mut tokens, |x, y| x <= y),
+            InstructionKind::SNE =>
+                eval_comparison(&mut registers, &mut tokens, |x, y| x != y),
 
             // Branch
             InstructionKind::B =>
@@ -219,6 +232,36 @@ where
     }
 }
 
+fn eval_comparison<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
+where
+    F: Fn(i32, i32) -> bool,
+{
+    if let Some(_) = tokens.consume() {
+        if let Ok(rd_idx) = tokens.expect_register() {
+            if let Some(_) = tokens.consume() {
+                if let Ok(rs_idx) = tokens.expect_register() {
+                    if let Some(_) = tokens.consume() {
+                        if let Ok(rt_idx) = tokens.expect_register() {
+                            registers[rd_idx] = if fun(registers[rs_idx], registers[rt_idx]) {
+                                1
+                            } else {
+                                0
+                            }
+                        } else {
+                            let num = tokens.expect_integer().unwrap();
+                            registers[rd_idx] = if fun(registers[rs_idx], num) {
+                                1
+                            } else {
+                                0
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn eval_branch<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F) -> bool
 where
     F: Fn(i32, i32) -> bool,
@@ -367,6 +410,11 @@ fn test_parse() {
     tokens.push(TokenKind::REGISTER(RegisterKind::t4, 12), 55);
     tokens.push(TokenKind::STACK(RegisterKind::sp, 29, 0), 56);
     tokens.push(TokenKind::EOL, 57);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SLT), 58);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0,  8), 59);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t7, 15), 60);
+    tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 61);
+    tokens.push(TokenKind::EOL, 62);
 
     parse(tokens);
 }

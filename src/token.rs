@@ -19,6 +19,13 @@ pub enum InstructionKind {
     LUI,      // Rt, Imm       | Rt[31:16] = Imm
 
     /// Comparison
+    SLT,      // Rd, Rs, Rt    | Rd = if Rs < Rt  then 1 else 0
+    SLTI,     // Rd, Rs, Imm   | Rd = if Rs < Imm then 1 else 0
+    SEQ,      // Rd, Rs, Rt    | Rd = if Rs == Rt then 1 else 0
+    SGE,      // Rd, Rs, Rt    | Rd = if Rs >= Rt then 1 else 0
+    SGT,      // Rd, Rs, Rt    | Rd = if Rs = Rt  then 1 else 0
+    SLE,      // Rd, Rs, Rt    | Rd = if Rs <= Rt then 1 else 0
+    SNE,      // Rd, Rs, Rt    | Rd = if Rs != Rt then 1 else 0
 
     /// Branch
     B,        // label         | goto label

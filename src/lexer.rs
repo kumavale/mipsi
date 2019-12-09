@@ -124,6 +124,18 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "LI"      => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LI),      number_of_lines),
                 "LUI"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LUI),     number_of_lines),
                 // Comparison
+                "SLTU" |
+                "SLT"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SLT),     number_of_lines),
+                "SLTIU" |
+                "SLTI"    => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SLTI),    number_of_lines),
+                "SEQ"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SEQ),     number_of_lines),
+                "SGEU" |
+                "SGE"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SGE),     number_of_lines),
+                "SGTU" |
+                "SGT"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SGT),     number_of_lines),
+                "SLEU" |
+                "SLE"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SLE),     number_of_lines),
+                "SNE"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SNE),     number_of_lines),
                 // Branch
                 "B"       => tokens.push(TokenKind::INSTRUCTION(InstructionKind::B),       number_of_lines),
                 "BEQ"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BEQ),     number_of_lines),
@@ -201,6 +213,7 @@ main:
     B BEQ BNE
     BGE BGT BLE BLT BGEU BGTU BLEU BLTU
     BEQZ BGEZ BGTZ BLEZ BLTZ BNEZ
+    SLT SLTU SLTI SLTIU SEQ SGE SGEU SGT SGTU SLE SLEU SNE
 ";
 
     let mut tokens: Tokens = Tokens::new();
@@ -303,6 +316,19 @@ main:
     assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::BLEZ));
     assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::BLTZ));
     assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::BNEZ));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SLT));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SLT));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SLTI));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SLTI));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SEQ));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SGE));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SGE));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SGT));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SGT));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SLE));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SLE));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SNE));
     assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
 
     // `cargo test -- --nocapture`
