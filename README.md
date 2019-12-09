@@ -83,5 +83,5 @@ A MIPS interpreter(simulator) written in Rust.
     - [ ] .asciiz
 
 ## Note
-1. Unsigned untegers are not supported, but instead behave as signed integers.
+1. Unsigned integers are not supported, but instead behave as signed integers.
 
