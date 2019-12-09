@@ -9,7 +9,7 @@ pub fn parse(mut tokens: Tokens) {
     while let Some(token) = tokens.consume() {
         //println!("{:?}", token); continue;
 
-        if let TokenKind::LABEL(_, _) = token.0 {
+        if let TokenKind::LABEL(_, _) = token.kind {
             tokens.consume().unwrap();
             if let Ok(_) = tokens.expect_eol() {
                 continue;
@@ -20,8 +20,10 @@ pub fn parse(mut tokens: Tokens) {
 
         match instruction_kind {
             // Arithmetic, Logic
-            InstructionKind::ADD |
-            InstructionKind::ADDI =>
+            InstructionKind::ADD  |
+            InstructionKind::ADDU |
+            InstructionKind::ADDI |
+            InstructionKind::ADDIU =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y),
             InstructionKind::SUB =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y),
@@ -74,9 +76,9 @@ pub fn parse(mut tokens: Tokens) {
                     registers[register_idx] = {
                         tokens.consume().unwrap();
                         let (r_idx, s_idx) = tokens.expect_stack().unwrap();
-                        let stack_idx = -(registers[r_idx] + s_idx/4) as usize;
+                        let stack_idx = -(registers[r_idx] + s_idx) as usize;
                         if stack.len() <= stack_idx {
-                            stack.resize(stack_idx, 0);
+                            stack.resize(stack_idx+1, 0);
                         }
                         stack[stack_idx]
                     };
@@ -87,7 +89,7 @@ pub fn parse(mut tokens: Tokens) {
                     let register_idx = tokens.expect_register().unwrap();
                     tokens.consume().unwrap();
                     let (r_idx, s_idx) = tokens.expect_stack().unwrap();
-                    let stack_idx = -(registers[r_idx] + s_idx/4) as usize;
+                    let stack_idx = -(registers[r_idx] + s_idx) as usize;
                     if stack.len() <= stack_idx {
                         stack.resize(stack_idx+1, 0);
                     }

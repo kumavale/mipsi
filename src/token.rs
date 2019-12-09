@@ -1,51 +1,65 @@
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum InstructionKind {
     /// Arithmetic, Logic
-    ADD,   // Rd, Rs, Rt    | Rd = Rs + Rt
-    ADDI,  // Rt, Rs, Imm   | Rt = Rs + Imm
-    SUB,   // Rd, Rs, Rt    | Rd = Rs - Rt
-    MUL,   // Rd, Rs, Rt    | Rd = Rs * Rt
-    DIV,   // Rd, Rs, Rt    | Rd = Rs / Rt
+    ADD,      // Rd, Rs, Rt    | Rd = Rs + Rt
+    ADDI,     // Rt, Rs, Imm   | Rt = Rs + Imm
+    ADDU,     // Rd, Rs, Rt    | Rd = Rs + Rt  | ADDU  == ADD
+    ADDIU,    // Rt, Rs, Imm   | Rt = Rs + Imm | ADDIU == ADDI
+    SUB,      // Rd, Rs, Rt    | Rd = Rs - Rt
+    MUL,      // Rd, Rs, Rt    | Rd = Rs * Rt
+    DIV,      // Rd, Rs, Rt    | Rd = Rs / Rt
 
-    AND,   // Rd, Rs, Rt    | Rd = Rs & Rt
-    ANDI,  // Rt, Rs, Imm   | Rt = Rs & Imm
-    OR,    // Rd, Rs, Rt    | Rd = Rs | Rt
-    ORI,   // Rt, Rs, Imm   | Rt = Rs | Imm
-    XOR,   // Rd, Rs, Rt    | Rd = Rs ^ Rt
-    XORI,  // Rt, Rs, Imm   | Rt = Rs ^ Imm
+    AND,      // Rd, Rs, Rt    | Rd = Rs & Rt
+    ANDI,     // Rt, Rs, Imm   | Rt = Rs & Imm
+    OR,       // Rd, Rs, Rt    | Rd = Rs | Rt
+    ORI,      // Rt, Rs, Imm   | Rt = Rs | Imm
+    XOR,      // Rd, Rs, Rt    | Rd = Rs ^ Rt
+    XORI,     // Rt, Rs, Imm   | Rt = Rs ^ Imm
 
     /// Constant
-    LI,    // Rd, Imm       | Rd = Imm
-    LUI,   // Rt, Imm       | Rt[31:16] = Imm
+    LI,       // Rd, Imm       | Rd = Imm
+    LUI,      // Rt, Imm       | Rt[31:16] = Imm
 
     /// Comparison
 
     /// Branch
     //B,     // label         | goto label
-    BEQ,   // Rs, Rt, label | goto label if Rs == Rt
+    BEQ,      // Rs, Rt, label | goto label if Rs == Rt
     //BGE,   // Rs, Rt, label | goto label if Rs >= Rt
     //BGT,   // Rs, Rt, label | goto label if Rs > Rt
-    BLE,   // Rs, Rt, label | goto label if Rs <= Rt
-    BLT,   // Rs, Rt, label | goto label if Rs < Rt
+    BLE,      // Rs, Rt, label | goto label if Rs <= Rt
+    BLT,      // Rs, Rt, label | goto label if Rs < Rt
     //BNEZ,  // Rs, Rt, label | goto label if Rs != 0
 
     /// Jump
-    J,     // Target        | goto Target
-    JAL,   // Target        | $ra = next idx; goto Target
-    JR,    // Rs, Rd        | Rd = next idx; goto Rs
-    JALR,  // Rs            | goto Rs
+    J,        // Target        | goto Target
+    JAL,      // Target        | $ra = next idx; goto Target
+    JR,       // Rs, Rd        | Rd = next idx; goto Rs
+    JALR,     // Rs            | goto Rs
 
     /// Load, Store
-    LA,    // Rd, address   | Rt = idx(stack)
-    LW,    // Rt, address   | Rt = stack[idx]
-    SW,    // Rt, address   | stack[idx] = Rt
+    LA,       // Rd, address   | Rt = idx(stack)
+    LW,       // Rt, address   | Rt = stack[idx]
+    SW,       // Rt, address   | stack[idx] = Rt
 
     /// Transfer
-    MOVE,  // Rd, Rs        | Rd = Rs
+    MOVE,     // Rd, Rs        | Rd = Rs
 
     /// Exception, Interrupt
     SYSCALL,  //
     NOP,      // Do nothing
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[allow(non_camel_case_types, dead_code)]
+pub enum PseudoKind {
+    text,            // Text space start
+    data,            // Data space start
+    globl,           // Ignore
+    word(i32),       // Number
+    byte(char),      // 1 char
+    space,           // n byte
+    asciiz(String),  // Strings
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -68,6 +82,7 @@ pub enum RegisterKind {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
     INSTRUCTION(InstructionKind),
+    //PSEUDO(PseudoKind),               // Pseudo instruction
     INTEGER(i32),                     // Immediate
     REGISTER(RegisterKind, usize),    // (_, Index)
     STACK(RegisterKind, usize, i32),  // (_, Append index)
@@ -76,12 +91,18 @@ pub enum TokenKind {
     EOL,                              // End of Line
 }
 
+#[derive(Clone, Debug)]
+pub struct Token {
+    pub kind: TokenKind,  // Token kind
+    pub line: u32,        // Number of lines
+}
+
 #[derive(Debug)]
 pub struct Tokens {
-    token: Vec<(TokenKind, u32)>,  // (TokenKind, number of lines)
-    idx: usize,                    // Current index
-    foremost: bool,                // Foremost
-    length: usize,                 // Token length
+    token: Vec<Token>,    // Token's vector
+    idx: usize,           // Current index
+    foremost: bool,       // Foremost
+    length: usize,        // Token length
 }
 
 //pub type Token = (TokenKind, u32);
@@ -89,7 +110,7 @@ pub struct Tokens {
 #[allow(dead_code)]
 impl Tokens {
     pub fn new() -> Self {
-        let token: Vec<(TokenKind, u32)> = Vec::new();
+        let token: Vec<Token> = Vec::new();
         Tokens { token, idx: 0, foremost: true, length: 0 }
     }
 
@@ -99,7 +120,7 @@ impl Tokens {
 
     pub fn push(&mut self, kind: TokenKind, line: u32) {
         self.length += 1;
-        self.token.push((kind, line));
+        self.token.push(Token { kind, line });
     }
 
     pub fn reset(&mut self) {
@@ -107,7 +128,7 @@ impl Tokens {
         self.idx = 0;
     }
 
-    pub fn consume(&mut self) -> Option<(TokenKind, u32)> {
+    pub fn consume(&mut self) -> Option<Token> {
         if self.foremost {
             self.foremost = false;
             Some(self.token[0].clone())
@@ -121,7 +142,7 @@ impl Tokens {
         }
     }
 
-    pub fn get_token(&self) -> (TokenKind, u32) {
+    pub fn get_token(&self) -> Token {
         self.token[self.idx].clone()
     }
 
@@ -135,65 +156,65 @@ impl Tokens {
 
     /// Get index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
     pub fn expect_address(&self) -> Result<usize, String> {
-        if let (TokenKind::ADDRESS(s), _) = self.token[self.idx].clone() {
+        if let TokenKind::ADDRESS(s) = self.token[self.idx].clone().kind {
             for t in &self.token {
-                if let (TokenKind::LABEL(name, idx), _) = t {
+                if let TokenKind::LABEL(name, idx) = &t.kind {
                     if &*s == &*name {
                         return Ok(*idx);
                     }
                 }
             }
-            let (_, line) = self.token[self.idx];
+            let line = self.token[self.idx].line;
             Err(format!("{}: invalid address: {}", line, s))
         } else {
-            let (kind, line) = self.token[self.idx].clone();
-            Err(format!("{}: expect TokenKind::ADDRESS(String). but got: {:?}", line, kind))
+            let t = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::ADDRESS(String). but got: {:?}", t.line, t.kind))
         }
     }
 
     pub fn expect_instruction(&self) -> Result<InstructionKind, String> {
-        if let (TokenKind::INSTRUCTION(k), _) = self.token[self.idx] {
+        if let TokenKind::INSTRUCTION(k) = self.token[self.idx].kind {
             Ok(k)
         } else {
-            let (kind, line) = self.token[self.idx].clone();
-            Err(format!("{}: expect TokenKind::INSTRUCTION(InstructionKind). but got: {:?}", line, kind))
+            let t = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::INSTRUCTION(InstructionKind). but got: {:?}", t.line, t.kind))
         }
     }
 
     pub fn expect_register(&self) -> Result<usize, String> {
-        if let (TokenKind::REGISTER(_, i), _) = self.token[self.idx] {
+        if let TokenKind::REGISTER(_, i) = self.token[self.idx].kind {
             Ok(i)
         } else {
-            let (kind, line) = self.token[self.idx].clone();
-            Err(format!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}", line, kind))
+            let t = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}", t.line, t.kind))
         }
     }
 
     /// Return: Ok((register_idx, append idx))
     pub fn expect_stack(&self) -> Result<(usize, i32), String> {
-        if let (TokenKind::STACK(_, i, j), _) = self.token[self.idx] {
+        if let TokenKind::STACK(_, i, j) = self.token[self.idx].kind {
             Ok((i, j))
         } else {
-            let (kind, line) = self.token[self.idx].clone();
-            Err(format!("{}: expect TokenKind::STACK(RegisterKind, usize, usize). but got: {:?}", line, kind))
+            let t = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::STACK(RegisterKind, usize, usize). but got: {:?}", t.line, t.kind))
         }
     }
 
     pub fn expect_integer(&self) -> Result<i32, String> {
-        if let (TokenKind::INTEGER(i), _) = self.token[self.idx] {
+        if let TokenKind::INTEGER(i) = self.token[self.idx].kind {
             Ok(i)
         } else {
-            let (kind, line) = self.token[self.idx].clone();
-            Err(format!("{}: expect TokenKind::INTEGER(i32). but got: {:?}", line, kind))
+            let t = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::INTEGER(i32). but got: {:?}", t.line, t.kind))
         }
     }
 
     pub fn expect_eol(&self) -> Result<(), String> {
-        if let (TokenKind::EOL, _) = self.token[self.idx] {
+        if let TokenKind::EOL = self.token[self.idx].kind {
             Ok(())
         } else {
-            let (kind, line) = self.token[self.idx].clone();
-            Err(format!("{}: expect TokenKind::EOL. but got: {:?}", line, kind))
+            let t = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::EOL. but got: {:?}", t.line, t.kind))
         }
     }
 }

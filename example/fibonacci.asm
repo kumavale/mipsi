@@ -19,9 +19,9 @@
 # ```
 
 main:
-    # loop from $t0 = 0 until 16
+    # loop from $t0 = 0 until 20
     move $t0, $0
-    loop: beq $t0, 16, exit
+    loop: beq $t0, 20, exit
 
     jal fibonacci
     jal print_output

@@ -106,39 +106,41 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
         } else {
             match &*word.to_ascii_uppercase() {
                 // Arithmetic, Logic
-                "ADD"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADD),  number_of_lines),
-                "ADDI" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI), number_of_lines),
-                "SUB"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SUB),  number_of_lines),
-                "MUL"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::MUL),  number_of_lines),
-                "DIV"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::DIV),  number_of_lines),
-                "AND"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::AND),  number_of_lines),
-                "ANDI" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ANDI), number_of_lines),
-                "OR"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::OR),   number_of_lines),
-                "ORI"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ORI),  number_of_lines),
-                "XOR"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::XOR),  number_of_lines),
-                "XORI" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::XORI), number_of_lines),
+                "ADD"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADD),     number_of_lines),
+                "ADDU"    => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADD),     number_of_lines),
+                "ADDI"    => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI),    number_of_lines),
+                "ADDIU"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI),    number_of_lines),
+                "SUB"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SUB),     number_of_lines),
+                "MUL"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::MUL),     number_of_lines),
+                "DIV"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::DIV),     number_of_lines),
+                "AND"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::AND),     number_of_lines),
+                "ANDI"    => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ANDI),    number_of_lines),
+                "OR"      => tokens.push(TokenKind::INSTRUCTION(InstructionKind::OR),      number_of_lines),
+                "ORI"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::ORI),     number_of_lines),
+                "XOR"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::XOR),     number_of_lines),
+                "XORI"    => tokens.push(TokenKind::INSTRUCTION(InstructionKind::XORI),    number_of_lines),
                 // Constant
-                "LI"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LI),   number_of_lines),
-                "LUI"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LUI),  number_of_lines),
+                "LI"      => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LI),      number_of_lines),
+                "LUI"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LUI),     number_of_lines),
                 // Comparison
                 // Branch
-                "BEQ"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BEQ),  number_of_lines),
-                "BLE"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLE),  number_of_lines),
-                "BLT"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLT),  number_of_lines),
+                "BEQ"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BEQ),     number_of_lines),
+                "BLE"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLE),     number_of_lines),
+                "BLT"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLT),     number_of_lines),
                 // Jump
-                "J"    => tokens.push(TokenKind::INSTRUCTION(InstructionKind::J),    number_of_lines),
-                "JAL"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JAL),  number_of_lines),
-                "JR"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JR),   number_of_lines),
-                "JALR" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JALR), number_of_lines),
+                "J"       => tokens.push(TokenKind::INSTRUCTION(InstructionKind::J),       number_of_lines),
+                "JAL"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JAL),     number_of_lines),
+                "JR"      => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JR),      number_of_lines),
+                "JALR"    => tokens.push(TokenKind::INSTRUCTION(InstructionKind::JALR),    number_of_lines),
                 // Load, Store
-                "LA"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LA),   number_of_lines),
-                "LW"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LW),   number_of_lines),
-                "SW"   => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SW),   number_of_lines),
+                "LA"      => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LA),      number_of_lines),
+                "LW"      => tokens.push(TokenKind::INSTRUCTION(InstructionKind::LW),      number_of_lines),
+                "SW"      => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SW),      number_of_lines),
                 // Transfer
-                "MOVE" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::MOVE), number_of_lines),
+                "MOVE"    => tokens.push(TokenKind::INSTRUCTION(InstructionKind::MOVE),    number_of_lines),
                 // Exception, Interrupt
                 "SYSCALL" => tokens.push(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), number_of_lines),
-                "NOP"  => tokens.push(TokenKind::INSTRUCTION(InstructionKind::NOP),  number_of_lines),
+                "NOP"     => tokens.push(TokenKind::INSTRUCTION(InstructionKind::NOP),     number_of_lines),
                 _ => {
                     if is_label(&word) {
                         let mut identifier = word.to_string();
@@ -189,71 +191,71 @@ main:
         buf.clear();
     }
 
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::LABEL("main".to_string(), 0));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::ADDI));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::zero,  0));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::ra,   31));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INTEGER(256));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::ADD));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t1,  9));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t2, 10));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t3, 11));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::SUB));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t4, 12));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t5, 13));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t6, 14));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::XOR));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t1, 9));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t1, 9));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t1, 9));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::LI));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::v0, 2));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INTEGER(1));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::MOVE));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::a0,  4));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t2, 10));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::BLT));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t0, 8));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t1, 9));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::ADDRESS("label".to_string()));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::MUL));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t4, 12));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t5, 13));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::t6, 14));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::J));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::ADDRESS("hoge".to_string()));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::JAL));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::ADDRESS("fuga".to_string()));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::JR));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::REGISTER(RegisterKind::ra, 31));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::STACK(RegisterKind::sp, 29,  0));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::STACK(RegisterKind::t0,  8,  0));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::STACK(RegisterKind::t1,  9, 20));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::INSTRUCTION(InstructionKind::NOP));
-    assert_eq!(tokens.consume().unwrap().0, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::LABEL("main".to_string(), 0));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::ADDI));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::zero,  0));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::ra,   31));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INTEGER(256));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::ADD));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t1,  9));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t2, 10));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t3, 11));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SUB));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t4, 12));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t5, 13));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t6, 14));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::XOR));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::LI));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::v0, 2));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INTEGER(1));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::MOVE));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::a0,  4));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t2, 10));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::BLT));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t0, 8));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::ADDRESS("label".to_string()));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::MUL));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t4, 12));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t5, 13));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::t6, 14));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::J));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::ADDRESS("hoge".to_string()));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::JAL));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::ADDRESS("fuga".to_string()));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::JR));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::REGISTER(RegisterKind::ra, 31));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::STACK(RegisterKind::sp, 29,  0));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::STACK(RegisterKind::t0,  8,  0));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::STACK(RegisterKind::t1,  9, 20));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::INSTRUCTION(InstructionKind::NOP));
+    assert_eq!(tokens.consume().unwrap().kind, TokenKind::EOL);
 
     // `cargo test -- --nocapture`
     tokens.reset();
     while let Some(token) = tokens.consume() {
         print!("{:?}", token);
-        if token.0 == TokenKind::EOL {
+        if token.kind == TokenKind::EOL {
             println!("");
         }
     }
