@@ -5,7 +5,7 @@ A MIPS interpreter(simulator) written in Rust.
 - [ ] Arithmetic, Logic
     - [x] ADD[U]
     - [x] ADDI[U]
-    - [x] SUB
+    - [x] SUB[U]
     - [x] MUL
     - [x] DIV
     - [x] AND
@@ -15,27 +15,40 @@ A MIPS interpreter(simulator) written in Rust.
     - [x] XOR
     - [x] XORI
     - [ ] NOT
+    - [ ] NOR
+    - [ ] NEG
+    - [ ] REM[U]
+    - [ ] SLL
+    - [ ] SLLV
+    - [ ] SRA
+    - [ ] SRV
+    - [ ] SRL
+    - [ ] SRLV
 - [x] Constant
     - [x] LI
     - [x] LUI
-- [ ] Comparison
-    - [ ] SLT
-    - [ ] SLTI
-    - [ ] SEQ
-    - [ ] SGE
-    - [ ] SGT
-    - [ ] SLE
-    - [ ] SNE
-- [ ] Branch
-    - [ ] B
+- [x] Comparison
+    - [x] SLT[U]
+    - [x] SLTI[U]
+    - [x] SEQ
+    - [x] SGE[U]
+    - [x] SGT[U]
+    - [x] SLE[U]
+    - [x] SNE
+- [x] Branch
+    - [x] B
     - [x] BEQ
-    - [ ] BGE
-    - [ ] BGT
-    - [x] BLE
-    - [x] BLT
-    - [ ] BNE
-    - [ ] BNEZ
-    - [ ] SLT
+    - [x] BGE[U]
+    - [x] BGT[U]
+    - [x] BLE[U]
+    - [x] BLT[U]
+    - [x] BNE
+    - [x] BEQZ
+    - [x] BGEZ
+    - [x] BGTZ
+    - [x] BLEZ
+    - [x] BLTZ
+    - [x] BNEZ
 - [x] Jump
     - [x] J
     - [x] JAL
@@ -48,10 +61,6 @@ A MIPS interpreter(simulator) written in Rust.
     - [x] SW
 - [ ] Transfer
     - [x] MOVE
-    - [ ] MFHI
-    - [ ] MFLO
-    - [ ] MTHI
-    - [ ] MTLO
     - [ ] MOVN
     - [ ] MOVZ
 - [ ] Exception, Interrupt
@@ -64,7 +73,7 @@ A MIPS interpreter(simulator) written in Rust.
         - [x] 11: print_int + '\n'
     - [ ] BREAK
     - [x] NOP
--[ ] Indicate
+- [ ] Indicate
     - [ ] .text
     - [ ] .data
     - [ ] .globl
@@ -72,4 +81,7 @@ A MIPS interpreter(simulator) written in Rust.
     - [ ] .byte
     - [ ] .space
     - [ ] .asciiz
+
+## Note
+1. Unsigned untegers are not supported, but instead behave as signed integers.
 
