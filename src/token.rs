@@ -3,8 +3,6 @@ pub enum InstructionKind {
     /// Arithmetic, Logic
     ADD,      // Rd, Rs, Rt    | Rd = Rs + Rt
     ADDI,     // Rt, Rs, Imm   | Rt = Rs + Imm
-    ADDU,     // Rd, Rs, Rt    | Rd = Rs + Rt  | ADDU  == ADD
-    ADDIU,    // Rt, Rs, Imm   | Rt = Rs + Imm | ADDIU == ADDI
     SUB,      // Rd, Rs, Rt    | Rd = Rs - Rt
     MUL,      // Rd, Rs, Rt    | Rd = Rs * Rt
     DIV,      // Rd, Rs, Rt    | Rd = Rs / Rt
@@ -23,13 +21,19 @@ pub enum InstructionKind {
     /// Comparison
 
     /// Branch
-    //B,     // label         | goto label
+    B,        // label         | goto label
     BEQ,      // Rs, Rt, label | goto label if Rs == Rt
-    //BGE,   // Rs, Rt, label | goto label if Rs >= Rt
-    //BGT,   // Rs, Rt, label | goto label if Rs > Rt
+    BNE,      // Rs, Rt, label | goto label if Rs != Rt
+    BGE,      // Rs, Rt, label | goto label if Rs >= Rt
+    BGT,      // Rs, Rt, label | goto label if Rs > Rt
     BLE,      // Rs, Rt, label | goto label if Rs <= Rt
     BLT,      // Rs, Rt, label | goto label if Rs < Rt
-    //BNEZ,  // Rs, Rt, label | goto label if Rs != 0
+    BEQZ,     // Rs, label     | goto label if Rs == 0
+    BGEZ,     // Rs, label     | goto label if Rs >= 0
+    BGTZ,     // Rs, label     | goto label if Rs > 0
+    BLEZ,     // Rs, label     | goto label if Rs <= 0
+    BLTZ,     // Rs, label     | goto label if Rs < 0
+    BNEZ,     // Rs, label     | goto label if Rs != 0
 
     /// Jump
     J,        // Target        | goto Target
@@ -52,12 +56,12 @@ pub enum InstructionKind {
 
 #[derive(Clone, Debug, PartialEq)]
 #[allow(non_camel_case_types, dead_code)]
-pub enum PseudoKind {
+pub enum IndicateKind {
     text,            // Text space start
     data,            // Data space start
     globl,           // Ignore
-    word(i32),       // Number
-    byte(char),      // 1 char
+    word(i32),       // Number(32-bit)
+    byte(char),      // 1 char(8-bit)
     space,           // n byte
     asciiz(String),  // Strings
 }
@@ -82,7 +86,7 @@ pub enum RegisterKind {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
     INSTRUCTION(InstructionKind),
-    //PSEUDO(PseudoKind),               // Pseudo instruction
+    //INDICATE(IndicateKind),           // Pseudo instruction
     INTEGER(i32),                     // Immediate
     REGISTER(RegisterKind, usize),    // (_, Index)
     STACK(RegisterKind, usize, i32),  // (_, Append index)

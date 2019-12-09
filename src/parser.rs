@@ -21,9 +21,7 @@ pub fn parse(mut tokens: Tokens) {
         match instruction_kind {
             // Arithmetic, Logic
             InstructionKind::ADD  |
-            InstructionKind::ADDU |
-            InstructionKind::ADDI |
-            InstructionKind::ADDIU =>
+            InstructionKind::ADDI =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y),
             InstructionKind::SUB =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y),
@@ -50,12 +48,32 @@ pub fn parse(mut tokens: Tokens) {
             // Comparison
 
             // Branch
+            InstructionKind::B =>
+                if eval_branch(&mut registers, &mut tokens, |_x, _y| true)    { continue; },
             InstructionKind::BEQ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x == y) { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x == y)    { continue; },
+            InstructionKind::BNE =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x != y)    { continue; },
+            InstructionKind::BGE =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x >= y)    { continue; },
+            InstructionKind::BGT =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x > y)     { continue; },
             InstructionKind::BLE =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y) { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y)    { continue; },
             InstructionKind::BLT =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)  { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)     { continue; },
+            InstructionKind::BEQZ =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x == y)    { continue; },
+            InstructionKind::BGEZ =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x >= y)    { continue; },
+            InstructionKind::BGTZ =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x > y)     { continue; },
+            InstructionKind::BLEZ =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y)    { continue; },
+            InstructionKind::BLTZ =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)     { continue; },
+            InstructionKind::BNEZ =>
+                if eval_branch(&mut registers, &mut tokens, |x, y| x != y)    { continue; },
 
             // Jump
             InstructionKind::J =>
@@ -224,8 +242,20 @@ where
                             return true;
                         }
                     }
+                } else {
+                    // BEQZ, BGEZ, BGTZ, BLEZ, BLTZ, BNEZ
+                    let idx = tokens.expect_address().unwrap();
+                    if fun(registers[rsrc1_idx], 0) {
+                        tokens.goto(idx-1);
+                        return true;
+                    }
                 }
             }
+        } else {
+            // B
+            let idx = tokens.expect_address().unwrap();
+            tokens.goto(idx-1);
+            return true;
         }
     }
 
