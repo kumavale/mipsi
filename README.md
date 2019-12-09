@@ -1,10 +1,10 @@
 # Very Small MIPS Interpreter
-A MIPS interpreter(simulator) written in Rust.
+A MIPS interpreter(simulator) written in Rust.  
 
 ## Supported
 - [ ] Arithmetic, Logic
-    - [x] ADD
-    - [x] ADDI
+    - [x] ADD[U]
+    - [x] ADDI[U]
     - [x] SUB
     - [x] MUL
     - [x] DIV
@@ -63,5 +63,13 @@ A MIPS interpreter(simulator) written in Rust.
     - [ ] SYSCALL(own syscall)
         - [x] 11: print_int + '\n'
     - [ ] BREAK
-    - [x] BOP
+    - [x] NOP
+-[ ] Indicate
+    - [ ] .text
+    - [ ] .data
+    - [ ] .globl
+    - [ ] .word
+    - [ ] .byte
+    - [ ] .space
+    - [ ] .asciiz
 
