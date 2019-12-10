@@ -128,12 +128,35 @@ fn split_words(line: &str) -> Vec<String> {
         // char for .byte
         // char to ascii code (e.g. 'a'=>97)
         } else if ch == '\'' {
-            let byte = (line_iter.next().unwrap() as u8).to_string();
-            // expect '\''
-            if line_iter.next().unwrap() != '\'' {
-                panic!(".byte");
+            let byte = line_iter.next().unwrap();
+            if byte == '\\' {
+                let ch2 = line_iter.next().unwrap();
+                let byte = match ch2 {
+                    '\\' => 92,
+                    '\'' => 39,
+                    '"'  => 34,
+                    '0'  =>  0,
+                    'n'  => 10,
+                    'r'  => 13,
+                    't'  =>  9,
+                    _ => panic!("not support this escape sequence: \\{}", ch2),
+                };
+                let ch2 = line_iter.next().unwrap();
+                // expect '\''
+                if ch2 != '\'' {
+                    panic!(".byte: not 1-byte");
+                }
+                words.push(byte.to_string());
+            } else if byte == '\'' {
+                words.push(0.to_string());
+            } else {
+                let ch2 = line_iter.next().unwrap();
+                // expect '\''
+                if ch2 != '\'' {
+                    panic!(".byte: not 1-byte");
+                }
+                words.push((byte as u8).to_string());
             }
-            words.push(byte);
 
         // word except string
         } else {

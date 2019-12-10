@@ -119,7 +119,6 @@ pub struct Tokens {
 
 //pub type Token = (TokenKind, u32);
 
-#[allow(dead_code)]
 impl Tokens {
     pub fn new() -> Self {
         let token: Vec<Token> = Vec::new();
@@ -135,6 +134,7 @@ impl Tokens {
         self.token.push(Token { kind, line });
     }
 
+    #[allow(dead_code)]
     pub fn reset(&mut self) {
         self.foremost = true;
         self.idx = 0;
@@ -154,6 +154,7 @@ impl Tokens {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_token(&self) -> Token {
         self.token[self.idx].clone()
     }
@@ -171,11 +172,22 @@ impl Tokens {
     }
 
     /// argument1: self
-    /// argument2: label index
+    /// argument2: label index => String or u8(ascii)
     pub fn get_string(&self, idx: i32) -> String {
-        if let TokenKind::INDICATE(IndicateKind::asciiz(asciiz))
-            = self.token[(idx+1) as usize].clone().kind
-        {
+        if let TokenKind::INDICATE(IndicateKind::asciiz(asciiz)) = self.token[(idx+1) as usize].clone().kind {
+            return asciiz;
+        } else if let TokenKind::INDICATE(IndicateKind::byte(byte)) = self.token[(idx+1) as usize].clone().kind {
+            let mut idx: usize = (idx + 2) as usize;
+            let mut asciiz = format!("{}", byte as char);
+
+            // until 0 or TokenKind::EOL
+            while let TokenKind::INDICATE(IndicateKind::byte(byte)) = self.token[idx].clone().kind {
+                if byte == 0 {
+                    break;
+                }
+                asciiz = format!("{}{}", asciiz, byte as char);
+                idx += 1;
+            }
             return asciiz;
         } else {
             return "".to_string();

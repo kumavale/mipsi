@@ -14,12 +14,11 @@ pub fn parse(mut tokens: Tokens) {
         // Skip LABEL, INDICATE and EOL
         if let TokenKind::LABEL(_, _) = tokens.kind() {
             tokens.consume().unwrap();
-            if let Ok(_) = tokens.expect_eol()            { continue; }
+            if let Ok(_) = tokens.expect_eol() { continue; }
         }
         if let TokenKind::INDICATE(_) = tokens.kind() {
-            tokens.consume().unwrap();
-            if let TokenKind::INDICATE(_) = tokens.kind() { continue; }
-            if let Ok(_) = tokens.expect_eol()            { continue; }
+            while let TokenKind::INDICATE(_) = tokens.consume().unwrap().kind { continue; }
+            if let Ok(_) = tokens.expect_eol() { continue; }
         }
 
         let instruction_kind = tokens.expect_instruction().unwrap();
