@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use super::token::*;
 
 pub fn parse(mut tokens: Tokens) {
@@ -5,20 +7,19 @@ pub fn parse(mut tokens: Tokens) {
     let mut registers = [0; 32];
     let mut stack = Vec::new();
 
-    while let Some(_token) = tokens.consume() {
+    #[allow(unused)]
+    while let Some(token) = tokens.consume() {
         //println!("{:?}", token); continue;
 
+        // Skip LABEL, INDICATE and EOL
         if let TokenKind::LABEL(_, _) = tokens.kind() {
             tokens.consume().unwrap();
-            if let Ok(_) = tokens.expect_eol() {
-                continue;
-            }
+            if let Ok(_) = tokens.expect_eol()            { continue; }
         }
         if let TokenKind::INDICATE(_) = tokens.kind() {
             tokens.consume().unwrap();
-            if let Ok(_) = tokens.expect_eol() {
-                continue;
-            }
+            if let TokenKind::INDICATE(_) = tokens.kind() { continue; }
+            if let Ok(_) = tokens.expect_eol()            { continue; }
         }
 
         let instruction_kind = tokens.expect_instruction().unwrap();
@@ -119,6 +120,9 @@ pub fn parse(mut tokens: Tokens) {
                     let register_idx = tokens.expect_register().unwrap();
                     registers[register_idx] = {
                         tokens.consume().unwrap();
+                        // TODO
+                        // x stack
+                        // o (stack|tokens) index
                         let (r_idx, s_idx) = tokens.expect_stack().unwrap();
                         let stack_idx = -(registers[r_idx] + s_idx) as usize;
                         if stack.len() <= stack_idx {
@@ -160,10 +164,12 @@ pub fn parse(mut tokens: Tokens) {
             InstructionKind::SYSCALL => {
                 match registers[2] {  // v0
                     // print_int
-                    1  => print!("{}", registers[4]),  // a0
+                    1  => {
+                        print!("{}", registers[4]);  // a0
+                        std::io::stdout().flush().unwrap();
+                    },
                     // print_string
                     4  => {
-                        use std::io::Write;
                         print!("{}", tokens.get_string(registers[4]));  // a0
                         std::io::stdout().flush().unwrap();
                     },

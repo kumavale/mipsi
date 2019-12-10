@@ -100,7 +100,7 @@ fn split_words(line: &str) -> Vec<String> {
             _ => (),
         }
 
-        // string
+        // string for .asciiz
         if ch == '"' {
             let mut asciiz = String::new();
             while let Some(mut ch2) = line_iter.next() {
@@ -124,6 +124,16 @@ fn split_words(line: &str) -> Vec<String> {
                 break;
             }
             words.push(asciiz);
+
+        // char for .byte
+        // char to ascii code (e.g. 'a'=>97)
+        } else if ch == '\'' {
+            let byte = (line_iter.next().unwrap() as u8).to_string();
+            // expect '\''
+            if line_iter.next().unwrap() != '\'' {
+                panic!(".byte");
+            }
+            words.push(byte);
 
         // word except string
         } else {
@@ -244,12 +254,30 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                             ".data" =>  TokenKind::INDICATE(IndicateKind::data),
                             ".globl" => TokenKind::INDICATE(IndicateKind::globl),
                             ".word" => {
-                                let num = words.next().unwrap().parse::<i32>().unwrap();
-                                TokenKind::INDICATE(IndicateKind::word(num))
+                                // TODO
+                                // 0:5 => Allocate 20 consecutive bytes for 5-element integer word array
+                                while let Some(word) = words.next() {
+                                    if !is_comment(&word) {
+                                        let num = word.parse::<i32>().unwrap();
+                                        tokens.push(TokenKind::INDICATE(IndicateKind::word(num)), number_of_lines);
+                                    } else {
+                                        break;
+                                    }
+                                };
+                                break;
                             },
                             ".byte" => {
-                                let ch = words.next().unwrap().parse::<char>().unwrap();
-                                TokenKind::INDICATE(IndicateKind::byte(ch))
+                                // TODO
+                                // 0:5 => Allocate 20 consecutive bytes for 5-element integer word array
+                                while let Some(word) = words.next() {
+                                    if !is_comment(&word) {
+                                        let byte = word.parse::<u8>().unwrap();
+                                        tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
+                                    } else {
+                                        break;
+                                    }
+                                };
+                                break;
                             },
                             ".asciiz" => {
                                 let s = words.next().unwrap().to_string();
@@ -301,7 +329,9 @@ main:
     SLT SLTU SLTI SLTIU SEQ SGE SGEU SGT SGTU SLE SLEU SNE
     REM
     .text .data .globl
-    .word 42 .byte a .asciiz \"string\"
+w:  .word 42, 0, 1, 2, 3
+b:  .byte 'a', 'i', 'u', 'e', 'o'
+s:  .asciiz \"string\"
 
 # Hello, World!
 .data ## Data declaration section
@@ -309,13 +339,13 @@ main:
 out_string: .asciiz \"Hello, World!\\n\"
 .text ## Assembly language instructions go in text segment
 main: ## Start of code section
-li $v0, 4 # system call code for printing string = 4
-la $a0, out_string # load address of string to be printed into $a0
-syscall # call operating system to perform operation
-# specified in $v0
-# syscall takes its arguments from $a0, $a1, ...
-li $v0, 10 # terminate program
-syscall
+    li $v0, 4           # system call code for printing string = 4
+    la $a0, out_string  # load address of string to be printed into $a0
+    syscall             # call operating system to perform operation
+                        # specified in $v0
+                        # syscall takes its arguments from $a0, $a1, ...
+    li $v0, 10          # terminate program
+    syscall
 
 ";
 
@@ -439,20 +469,33 @@ syscall
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::globl));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("w".to_string(), 112));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(42)));
-    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte('a')));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(0)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(1)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(2)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(3)));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("b".to_string(), 119));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(97)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(105)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(117)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(101)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(111)));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("s".to_string(), 126));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("string".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
 
     // Hello World
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("out_string".to_string(), 118));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("out_string".to_string(), 131));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("Hello, World!\n".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::text));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 123));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 136));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LI));
     assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::v0, 2));

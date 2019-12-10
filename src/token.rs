@@ -69,7 +69,7 @@ pub enum IndicateKind {
     data,            // Data space start
     globl,           // Ignore
     word(i32),       // Number(32-bit)
-    byte(char),      // 1 char(8-bit)
+    byte(u8),        // 1 char(8-bit)
     asciiz(String),  // String
 }
 
