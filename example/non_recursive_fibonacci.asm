@@ -1,5 +1,13 @@
 
+    .data
+msg: .asciiz "Give a number: "
+
+    .text
 main:
+    li $v0, 4
+    la $a0, msg
+    syscall
+
     li $v0, 5
     syscall
     add $a0, $v0, $zero
@@ -33,7 +41,6 @@ fib:
 # return(x);
 
     addi $t0, $zero, 1
-    jal print_output
 
     beqz $a0, return0
     beq $a0, $t0, return1

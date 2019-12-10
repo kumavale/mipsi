@@ -70,7 +70,7 @@ pub enum IndicateKind {
     globl,           // Ignore
     word(i32),       // Number(32-bit)
     byte(char),      // 1 char(8-bit)
-    asciiz(String),  // String // Until supported ' '
+    asciiz(String),  // String
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -164,6 +164,22 @@ impl Tokens {
 
     pub fn idx(&self) -> usize {
         self.idx
+    }
+
+    pub fn kind(&self) -> TokenKind {
+        self.token[self.idx].kind.clone()
+    }
+
+    /// argument1: self
+    /// argument2: label index
+    pub fn get_string(&self, idx: i32) -> String {
+        if let TokenKind::INDICATE(IndicateKind::asciiz(asciiz))
+            = self.token[(idx+1) as usize].clone().kind
+        {
+            return asciiz;
+        } else {
+            return "".to_string();
+        }
     }
 
     /// Get index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()

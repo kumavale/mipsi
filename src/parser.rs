@@ -5,13 +5,16 @@ pub fn parse(mut tokens: Tokens) {
     let mut registers = [0; 32];
     let mut stack = Vec::new();
 
-    //let mut word:   Vec<i32>    = Vec::new();
-    //let mut asciiz: Vec<String> = Vec::new();
-
-    while let Some(token) = tokens.consume() {
+    while let Some(_token) = tokens.consume() {
         //println!("{:?}", token); continue;
 
-        if let TokenKind::LABEL(_, _) = token.kind {
+        if let TokenKind::LABEL(_, _) = tokens.kind() {
+            tokens.consume().unwrap();
+            if let Ok(_) = tokens.expect_eol() {
+                continue;
+            }
+        }
+        if let TokenKind::INDICATE(_) = tokens.kind() {
             tokens.consume().unwrap();
             if let Ok(_) = tokens.expect_eol() {
                 continue;
@@ -104,6 +107,12 @@ pub fn parse(mut tokens: Tokens) {
 
             // Load, Store
             InstructionKind::LA => {
+                if let Some(_) = tokens.consume() {
+                    let register_idx = tokens.expect_register().unwrap();
+                    if let Some(_) = tokens.consume() {
+                        registers[register_idx] = tokens.expect_address().unwrap() as i32;
+                    }
+                }
             },
             InstructionKind::LW => {
                 if let Some(_) = tokens.consume() {
@@ -153,7 +162,11 @@ pub fn parse(mut tokens: Tokens) {
                     // print_int
                     1  => print!("{}", registers[4]),  // a0
                     // print_string
-                    //4  => print!("{}", data[registers[4] as usize]),  // a0
+                    4  => {
+                        use std::io::Write;
+                        print!("{}", tokens.get_string(registers[4]));  // a0
+                        std::io::stdout().flush().unwrap();
+                    },
                     // read_int
                     5  => {
                         let mut input = String::new();

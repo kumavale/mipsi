@@ -89,10 +89,66 @@ fn is_comment(word: &str) -> bool {
     word.starts_with("#")
 }
 
+fn split_words(line: &str) -> Vec<String> {
+    let mut words: Vec<String> = Vec::new();
+    let mut line_iter = line.chars();
+
+    while let Some(ch) = line_iter.next() {
+        // Skip white space
+        match ch {
+            ' ' | ',' | '\n' | '\r' | '\t' => continue,
+            _ => (),
+        }
+
+        // string
+        if ch == '"' {
+            let mut asciiz = String::new();
+            while let Some(mut ch2) = line_iter.next() {
+                if ch2 != '"' {
+                    if ch2 == '\\' {
+                        let ch3 = line_iter.next().unwrap();
+                        ch2 = match ch3 {
+                            '\\' => '\\',
+                            '\'' => '\'',
+                            '"'  => '\"',
+                            '0'  => '\0',
+                            'n'  => '\n',
+                            'r'  => '\r',
+                            't'  => '\t',
+                            _ => panic!("not support this escape sequence: \\{}", ch3),
+                        };
+                    }
+                    asciiz = format!("{}{}", asciiz, ch2);
+                    continue;
+                }
+                break;
+            }
+            words.push(asciiz);
+
+        // word except string
+        } else {
+            let mut word = format!("{}", ch);
+            while let Some(ch2) = line_iter.next() {
+                match ch2 {
+                    ' ' | ',' | '\n' | '\r' | '\t' => { break; },
+                    _ => {
+                        word = format!("{}{}", word, ch2);
+                    },
+                }
+            }
+            words.push(word);
+        }
+    }
+
+    words
+}
+
 /// Recieve 1 line
 pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
-    let line = line.replace(",", " ");
-    let words: Vec<&str> = line.split_whitespace().collect();
+    let words: Vec<String> = split_words(&line);
+    let words: Vec<&str>   = words.iter().map(|s| &**s).collect();
+
+    //println!("{:?}", words);
 
     // Skip blank line either comment line
     if words.len() == 0 || words.len() > 0 && words[0].starts_with("#") {
@@ -182,6 +238,8 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                         TokenKind::LABEL(identifier, tokens.len())
                     } else if is_indicate(&word) {
                         match *word {
+                            // TODO
+                            // unwrap() => TokenKind::INVALID()
                             ".text" =>  TokenKind::INDICATE(IndicateKind::text),
                             ".data" =>  TokenKind::INDICATE(IndicateKind::data),
                             ".globl" => TokenKind::INDICATE(IndicateKind::globl),
@@ -194,9 +252,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                                 TokenKind::INDICATE(IndicateKind::byte(ch))
                             },
                             ".asciiz" => {
-                                let mut s = words.next().unwrap().to_string();
-                                s.remove(s.len()-1);  // Delete last  '"'
-                                s.remove(0);          // Delete first '"'
+                                let s = words.next().unwrap().to_string();
                                 TokenKind::INDICATE(IndicateKind::asciiz(s))
                             },
                             _ => TokenKind::INVALID(format!("invalid indicate: {}", word))
@@ -246,6 +302,21 @@ main:
     REM
     .text .data .globl
     .word 42 .byte a .asciiz \"string\"
+
+# Hello, World!
+.data ## Data declaration section
+## String to be printed:
+out_string: .asciiz \"Hello, World!\\n\"
+.text ## Assembly language instructions go in text segment
+main: ## Start of code section
+li $v0, 4 # system call code for printing string = 4
+la $a0, out_string # load address of string to be printed into $a0
+syscall # call operating system to perform operation
+# specified in $v0
+# syscall takes its arguments from $a0, $a1, ...
+li $v0, 10 # terminate program
+syscall
+
 ";
 
     let mut tokens: Tokens = Tokens::new();
@@ -256,122 +327,149 @@ main:
         buf.clear();
     }
 
-    assert_tokens(&mut tokens, TokenKind::LABEL("main".to_string(), 0));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::ADDI));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::zero,  0));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::ra,   31));
-    assert_tokens(&mut tokens, TokenKind::INTEGER(256));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::ADD));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t1,  9));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t2, 10));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t3, 11));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SUB));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t4, 12));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t5, 13));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t6, 14));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::XOR));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t1, 9));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t1, 9));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t1, 9));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::LI));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::v0, 2));
-    assert_tokens(&mut tokens, TokenKind::INTEGER(1));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::MOVE));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::a0,  4));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t2, 10));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BLT));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t0, 8));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t1, 9));
-    assert_tokens(&mut tokens, TokenKind::ADDRESS("label".to_string()));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::MUL));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t4, 12));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t5, 13));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::t6, 14));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::J));
-    assert_tokens(&mut tokens, TokenKind::ADDRESS("hoge".to_string()));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::JAL));
-    assert_tokens(&mut tokens, TokenKind::ADDRESS("fuga".to_string()));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::JR));
-    assert_tokens(&mut tokens, TokenKind::REGISTER(RegisterKind::ra, 31));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::STACK(RegisterKind::sp, 29,  0));
-    assert_tokens(&mut tokens, TokenKind::STACK(RegisterKind::t0,  8,  0));
-    assert_tokens(&mut tokens, TokenKind::STACK(RegisterKind::t1,  9, 20));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::NOP));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::ADD));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::ADD));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::ADDI));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::ADDI));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SUB));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SUB));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::AND));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::ANDI));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::OR));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::ORI));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::XOR));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::XORI));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::B));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BEQ));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BNE));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BGE));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BGT));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BLE));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BLT));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BGE));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BGT));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BLE));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BLT));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BEQZ));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BGEZ));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BGTZ));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BLEZ));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BLTZ));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::BNEZ));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SLT));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SLT));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SLTI));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SLTI));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SEQ));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SGE));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SGE));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SGT));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SGT));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SLE));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SLE));
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::SNE));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INSTRUCTION(InstructionKind::REM));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INDICATE(IndicateKind::text));
-    assert_tokens(&mut tokens, TokenKind::INDICATE(IndicateKind::data));
-    assert_tokens(&mut tokens, TokenKind::INDICATE(IndicateKind::globl));
-    assert_tokens(&mut tokens, TokenKind::EOL);
-    assert_tokens(&mut tokens, TokenKind::INDICATE(IndicateKind::word(42)));
-    assert_tokens(&mut tokens, TokenKind::INDICATE(IndicateKind::byte('a')));
-    assert_tokens(&mut tokens, TokenKind::INDICATE(IndicateKind::asciiz("string".to_string())));
-    assert_tokens(&mut tokens, TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 0));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADDI));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::zero,  0));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::ra,   31));
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(256));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADD));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t1,  9));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t2, 10));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t3, 11));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SUB));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t4, 12));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t5, 13));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t6, 14));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::XOR));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LI));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::v0, 2));
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(1));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::MOVE));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::a0,  4));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t2, 10));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BLT));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t0, 8));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t1, 9));
+    assert_eq!(tokens.consume_kind(), TokenKind::ADDRESS("label".to_string()));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::MUL));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t4, 12));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t5, 13));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::t6, 14));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::J));
+    assert_eq!(tokens.consume_kind(), TokenKind::ADDRESS("hoge".to_string()));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::JAL));
+    assert_eq!(tokens.consume_kind(), TokenKind::ADDRESS("fuga".to_string()));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::JR));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::ra, 31));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::STACK(RegisterKind::sp, 29,  0));
+    assert_eq!(tokens.consume_kind(), TokenKind::STACK(RegisterKind::t0,  8,  0));
+    assert_eq!(tokens.consume_kind(), TokenKind::STACK(RegisterKind::t1,  9, 20));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::NOP));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADD));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADD));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADDI));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADDI));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SUB));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SUB));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::AND));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ANDI));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::OR));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ORI));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::XOR));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::XORI));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::B));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BEQ));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BNE));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BGE));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BGT));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BLE));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BLT));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BGE));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BGT));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BLE));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BLT));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BEQZ));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BGEZ));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BGTZ));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BLEZ));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BLTZ));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::BNEZ));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SLT));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SLT));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SLTI));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SLTI));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SEQ));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SGE));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SGE));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SGT));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SGT));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SLE));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SLE));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SNE));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::REM));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::text));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::globl));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(42)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte('a')));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("string".to_string())));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+
+    // Hello World
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("out_string".to_string(), 118));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("Hello, World!\n".to_string())));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::text));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 123));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LI));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::v0, 2));
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(4));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LA));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::a0, 4));
+    assert_eq!(tokens.consume_kind(), TokenKind::ADDRESS("out_string".to_string()));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LI));
+    assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::v0, 2));
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(10));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
 
     // `cargo test -- --nocapture`
     tokens.reset();
@@ -384,7 +482,9 @@ main:
 }
 
 #[cfg(test)]
-fn assert_tokens(tokens: &mut Tokens, token_kind: TokenKind) {
-    assert_eq!(tokens.consume().unwrap().kind, token_kind);
+impl Tokens {
+    pub fn consume_kind(&mut self) -> TokenKind {
+        self.consume().unwrap().kind
+    }
 }
 
