@@ -4,7 +4,9 @@ pub fn parse(mut tokens: Tokens) {
 
     let mut registers = [0; 32];
     let mut stack = Vec::new();
-    //let mut data: Vec<String> = vec![];
+
+    //let mut word:   Vec<i32>    = Vec::new();
+    //let mut asciiz: Vec<String> = Vec::new();
 
     while let Some(token) = tokens.consume() {
         //println!("{:?}", token); continue;
@@ -29,6 +31,8 @@ pub fn parse(mut tokens: Tokens) {
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y),
             InstructionKind::DIV =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x / y),
+            InstructionKind::REM =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x % y),
             InstructionKind::AND |
             InstructionKind::ANDI =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x & y),
@@ -62,31 +66,31 @@ pub fn parse(mut tokens: Tokens) {
 
             // Branch
             InstructionKind::B =>
-                if eval_branch(&mut registers, &mut tokens, |_x, _y| true)    { continue; },
+                if eval_branch(&mut registers, &mut tokens, |_, _| true)   { continue; },
             InstructionKind::BEQ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x == y)    { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x == y) { continue; },
             InstructionKind::BNE =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x != y)    { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x != y) { continue; },
             InstructionKind::BGE =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x >= y)    { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x >= y) { continue; },
             InstructionKind::BGT =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x > y)     { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x > y)  { continue; },
             InstructionKind::BLE =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y)    { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y) { continue; },
             InstructionKind::BLT =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)     { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)  { continue; },
             InstructionKind::BEQZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x == y)    { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x == y) { continue; },
             InstructionKind::BGEZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x >= y)    { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x >= y) { continue; },
             InstructionKind::BGTZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x > y)     { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x > y)  { continue; },
             InstructionKind::BLEZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y)    { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y) { continue; },
             InstructionKind::BLTZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)     { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)  { continue; },
             InstructionKind::BNEZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x != y)    { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x != y) { continue; },
 
             // Jump
             InstructionKind::J =>

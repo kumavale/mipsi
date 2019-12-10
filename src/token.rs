@@ -6,6 +6,7 @@ pub enum InstructionKind {
     SUB,      // Rd, Rs, Rt    | Rd = Rs - Rt
     MUL,      // Rd, Rs, Rt    | Rd = Rs * Rt
     DIV,      // Rd, Rs, Rt    | Rd = Rs / Rt
+    REM,      // Rd, Rs, Rt    | Rd = Rs % Rt
 
     AND,      // Rd, Rs, Rt    | Rd = Rs & Rt
     ANDI,     // Rt, Rs, Imm   | Rt = Rs & Imm
@@ -69,8 +70,7 @@ pub enum IndicateKind {
     globl,           // Ignore
     word(i32),       // Number(32-bit)
     byte(char),      // 1 char(8-bit)
-    space,           // n byte
-    asciiz(String),  // Strings
+    asciiz(String),  // String // Until supported ' '
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -93,12 +93,13 @@ pub enum RegisterKind {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
     INSTRUCTION(InstructionKind),
-    //INDICATE(IndicateKind),           // Pseudo instruction
+    INDICATE(IndicateKind),           // Pseudo instruction
     INTEGER(i32),                     // Immediate
     REGISTER(RegisterKind, usize),    // (_, Index)
     STACK(RegisterKind, usize, i32),  // (_, Append index)
     LABEL(String, usize),             // (Literal, Index)
     ADDRESS(String),                  // Literal
+    INVALID(String),                  // Invalid string
     EOL,                              // End of Line
 }
 
