@@ -55,8 +55,7 @@ A MIPS interpreter(simulator) written in Rust.
     - [x] JR
     - [x] JALR
 - [ ] Load, Store
-    - [ ] LA
-    - [ ] LI
+    - [x] LA
     - [x] LW
     - [x] SW
 - [ ] Transfer
@@ -66,21 +65,22 @@ A MIPS interpreter(simulator) written in Rust.
 - [ ] Exception, Interrupt
     - [ ] SYSCALL
         - [x]  1: print_int
-        - [ ]  4: print_string
+        - [x]  4: print_string
         - [x]  5: read_int
+        - [x]  8: read_string
         - [x] 10: exit
     - [ ] SYSCALL(own syscall)
         - [x] 11: print_int + '\n'
     - [ ] BREAK
     - [x] NOP
 - [ ] Indicate
-    - [ ] .text
-    - [ ] .data
-    - [ ] .globl
-    - [ ] .word
-    - [ ] .byte
-    - [ ] .space
-    - [ ] .asciiz
+    - [x] .text
+    - [x] .data
+    - [x] .globl
+    - [x] .word
+    - [x] .byte
+    - [x] .space
+    - [x] .ascii[z]
 
 ## Note
 1. Unsigned integers are not supported, but instead behave as signed integers.
