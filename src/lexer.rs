@@ -208,6 +208,19 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "MUL"     => TokenKind::INSTRUCTION(InstructionKind::MUL),
                 "DIV"     => TokenKind::INSTRUCTION(InstructionKind::DIV),
                 "REM"     => TokenKind::INSTRUCTION(InstructionKind::REM),
+
+                "NOR"     => TokenKind::INSTRUCTION(InstructionKind::NOR),
+                "NOT"     => TokenKind::INSTRUCTION(InstructionKind::NOT),
+
+                "SLL"     => TokenKind::INSTRUCTION(InstructionKind::SLL),
+                "SLLV"    => TokenKind::INSTRUCTION(InstructionKind::SLLV),
+                "SRA"     => TokenKind::INSTRUCTION(InstructionKind::SRA),
+                "SRAV"    => TokenKind::INSTRUCTION(InstructionKind::SRAV),
+                "SRL"     => TokenKind::INSTRUCTION(InstructionKind::SRL),
+                "SRLV"    => TokenKind::INSTRUCTION(InstructionKind::SRLV),
+                "ROL"     => TokenKind::INSTRUCTION(InstructionKind::ROL),
+                "ROR"     => TokenKind::INSTRUCTION(InstructionKind::ROR),
+
                 "AND"     => TokenKind::INSTRUCTION(InstructionKind::AND),
                 "ANDI"    => TokenKind::INSTRUCTION(InstructionKind::ANDI),
                 "OR"      => TokenKind::INSTRUCTION(InstructionKind::OR),
@@ -360,7 +373,8 @@ w:  .word 42, 0, 1, 2, 3
 b:  .byte 'a', 'i', 'u', 'e', 'o'
 s:  .asciiz \"string\"
 n:  .space 256
-
+    NOR NOT
+    SLL SLLV SRA SRAV SRL SRLV ROL ROR
 
 # Hello, World!
 .data ## Data declaration section
@@ -521,17 +535,28 @@ main: ## Start of code section
         assert_eq!(&s[..], [1, 2, 3]);
     }
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::NOR));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::NOT));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SLL));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SLLV));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SRA));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SRAV));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SRL));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SRLV));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ROL));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ROR));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
 
     // Hello World
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("out_string".to_string(), 134));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("out_string".to_string(), 146));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("Hello, World!\n".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::text));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 139));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 151));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LI));
     assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::v0, 2));

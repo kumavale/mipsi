@@ -8,6 +8,18 @@ pub enum InstructionKind {
     DIV,      // Rd, Rs, Rt    | Rd = Rs / Rt
     REM,      // Rd, Rs, Rt    | Rd = Rs % Rt
 
+    NOR,      // Rd, Rs, Rt    | Rd = ~(Rs | Rt)
+    NOT,      // Rd, Rs        | Rd = ~Rs
+
+    SLL,      // Rd, Rs, Shamt | Rd = Rs << Shamt
+    SLLV,     // Rd, Rs, Rt    | Rd = Rs << Rt
+    SRA,      // Rd, Rs, Shamt | Rd = Rs >> Shamt
+    SRAV,     // Rd, Rs, Rt    | Rd = Rs >> Rt
+    SRL,      // Rd, Rs, Shamt | Rd = Rs >> Shamt
+    SRLV,     // Rd, Rs, Rt    | Rd = Rs >> Rt
+    ROL,      // Rd, Rs, Rt    | Rd = left rotate
+    ROR,      // Rd, Rs, Rt    | Rd = right rotate
+
     AND,      // Rd, Rs, Rt    | Rd = Rs & Rt
     ANDI,     // Rt, Rs, Imm   | Rt = Rs & Imm
     OR,       // Rd, Rs, Rt    | Rd = Rs | Rt

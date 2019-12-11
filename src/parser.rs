@@ -37,6 +37,28 @@ pub fn parse(mut tokens: Tokens) {
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x / y),
             InstructionKind::REM =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x % y),
+
+            InstructionKind::NOR =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| !(x | y)),
+            InstructionKind::NOT =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, _| !x),
+
+            InstructionKind::SLL |
+            InstructionKind::SLLV =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x << y),
+            InstructionKind::SRA |
+            InstructionKind::SRAV =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x >> y),
+            InstructionKind::SRL |
+            InstructionKind::SRLV =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 >> y) as i32),
+            //InstructionKind::ROL =>
+            //    eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 >> y) as i32),
+            //    eval_arithmetic(&mut registers, &mut tokens, |x, y| x << y),
+            //    eval_arithmetic(&mut registers, &mut tokens, |x, y| x | y),
+            //InstructionKind::ROR =>
+            //    eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 >> y) as i32),
+
             InstructionKind::AND |
             InstructionKind::ANDI =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x & y),
@@ -235,7 +257,7 @@ pub fn parse(mut tokens: Tokens) {
                 }
             },
             InstructionKind::NOP => (),  // Do nothing
-            //_ => (),
+            _ => (),
         }
 
         // expect TokenKind::EOL
@@ -290,7 +312,7 @@ where
                     r2 = num;
                 }
             } else {
-                // TODO
+                // NOT
             }
             fun(r1, r2)
         };
@@ -486,6 +508,10 @@ fn test_parse() {
     tokens.push(TokenKind::REGISTER(RegisterKind::t7, 15), 60);
     tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 61);
     tokens.push(TokenKind::EOL, 62);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::NOT), 63);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t7, 15), 64);
+    tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 65);
+    tokens.push(TokenKind::EOL, 66);
 
     parse(tokens);
 }
