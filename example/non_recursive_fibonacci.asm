@@ -15,6 +15,14 @@ main:
     # if ($a0 < 2) goto exit;
     blt $a0, 2, exit
 
+    move $t5, $a0
+    li $v0, 11
+    li $a0, 0
+    syscall
+    li $a0, 1
+    syscall
+    move $a0, $t5
+
     jal fib
 
 exit:
@@ -44,7 +52,6 @@ fib:
 
     beqz $a0, return0
     beq $a0, $t0, return1
-    jal print_output
 
     #arxikopiisi
 

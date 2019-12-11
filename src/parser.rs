@@ -4,7 +4,8 @@ use super::token::*;
 
 pub fn parse(mut tokens: Tokens) {
 
-    let mut registers = [0; 32];
+    let mut registers: [i32; 32] = [0; 32];
+    let mut addresses: [Option<i32>; 32] = [None; 32];
     let mut stack = Vec::new();
 
     #[allow(unused)]
@@ -14,11 +15,11 @@ pub fn parse(mut tokens: Tokens) {
         // Skip LABEL, INDICATE and EOL
         if let TokenKind::LABEL(_, _) = tokens.kind() {
             tokens.consume().unwrap();
-            if let Ok(_) = tokens.expect_eol() { continue; }
+            if tokens.expect_eol().is_ok() { continue; }
         }
         if let TokenKind::INDICATE(_) = tokens.kind() {
             while let TokenKind::INDICATE(_) = tokens.consume().unwrap().kind { continue; }
-            if let Ok(_) = tokens.expect_eol() { continue; }
+            if tokens.expect_eol().is_ok() { continue; }
         }
 
         let instruction_kind = tokens.expect_instruction().unwrap();
@@ -107,56 +108,94 @@ pub fn parse(mut tokens: Tokens) {
 
             // Load, Store
             InstructionKind::LA => {
-                if let Some(_) = tokens.consume() {
-                    let register_idx = tokens.expect_register().unwrap();
-                    if let Some(_) = tokens.consume() {
-                        registers[register_idx] = tokens.expect_address().unwrap() as i32;
-                    }
-                }
+                tokens.consume().unwrap();
+                let register_idx = tokens.expect_register().unwrap();
+                tokens.consume().unwrap();
+                let label_idx = tokens.expect_address().unwrap() as i32;
+                registers[register_idx] = label_idx;
+                addresses[register_idx] = Some(label_idx);
             },
             InstructionKind::LW => {
-                if let Some(_) = tokens.consume() {
-                    let register_idx = tokens.expect_register().unwrap();
-                    registers[register_idx] = {
-                        tokens.consume().unwrap();
+                tokens.consume().unwrap();
+                let register_idx = tokens.expect_register().unwrap();
+                tokens.consume().unwrap();
+                if let Ok((r_idx, s_idx)) = tokens.expect_stack() {
+                    let idx = -(registers[r_idx] + s_idx);
+
+                    let is_tokens_idx = if idx == 0 {
+                        // UNSTABLE
                         // TODO
-                        // x stack
-                        // o (stack|tokens) index
-                        let (r_idx, s_idx) = tokens.expect_stack().unwrap();
-                        let stack_idx = -(registers[r_idx] + s_idx) as usize;
+                        if let Some(idx) =  addresses[r_idx] {
+                            idx == 0
+                        } else {
+                            false
+                        }
+                    } else {
+                        idx < 0
+                    };
+
+                    // tokens index
+                    if is_tokens_idx {
+                        let l_idx = registers[r_idx];  // label index
+                        let mut cnt: i32 = 0;
+                        loop {
+                            if 0 <= l_idx - cnt*4 && l_idx - cnt*4 < tokens.token.len() as i32 {
+                                if let TokenKind::LABEL(_, idx) = tokens.token[(l_idx-cnt*4) as usize].kind {
+                                    //dbg!(l_idx - cnt*4);
+                                    //println!("\t\t\tl_idx:{}, cnt:{}, cnt*4={}", l_idx, cnt, cnt*4);
+                                    if let Some(a) = addresses[r_idx] {
+                                        if idx as i32 == a {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            cnt += 1;
+                        }
+                        //dbg!(cnt);
+                        registers[register_idx] = tokens.get_int(&registers, l_idx-cnt*4 + cnt, false);
+                        //dbg!(registers[register_idx]);
+
+                        // stack index
+                    } else {
+                        let stack_idx = idx as usize;
                         if stack.len() <= stack_idx {
+                            //dbg!(stack_idx);
                             stack.resize(stack_idx+1, 0);
                         }
-                        stack[stack_idx]
-                    };
+                        registers[register_idx] = stack[stack_idx];
+                    }
+                } else {
+                    let idx = tokens.expect_address().unwrap() as i32;
+                    registers[register_idx] = tokens.get_int(&registers, idx, false);
                 }
             },
             InstructionKind::SW => {
-                if let Some(_) = tokens.consume() {
-                    let register_idx = tokens.expect_register().unwrap();
-                    tokens.consume().unwrap();
-                    let (r_idx, s_idx) = tokens.expect_stack().unwrap();
-                    let stack_idx = -(registers[r_idx] + s_idx) as usize;
-                    if stack.len() <= stack_idx {
-                        stack.resize(stack_idx+1, 0);
-                    }
-                    stack[stack_idx] = registers[register_idx];
+                tokens.consume().unwrap();
+                let register_idx = tokens.expect_register().unwrap();
+                tokens.consume().unwrap();
+                let (r_idx, s_idx) = tokens.expect_stack().unwrap();
+                let stack_idx = -(registers[r_idx] + s_idx) as usize;
+                if stack.len() <= stack_idx {
+                    stack.resize(stack_idx+1, 0);
                 }
+                stack[stack_idx] = registers[register_idx];
             },
 
             // Transfer
             InstructionKind::MOVE => {
-                if let Some(_) = tokens.consume() {
-                    let register_idx = tokens.expect_register().unwrap();
-                    registers[register_idx] = {
-                        let mut r1_idx = 0;
-                        if let Some(_) = tokens.consume() {
-                            let register_idx = tokens.expect_register().unwrap();
-                            r1_idx = register_idx;
-                        }
-                        registers[r1_idx]
+                tokens.consume().unwrap();
+                let register_idx = tokens.expect_register().unwrap();
+                registers[register_idx] = {
+                    let r1_idx = if tokens.consume().is_some() {
+                        tokens.expect_register().unwrap()
+                    } else {
+                        // TODO
+                        //todo!();
+                        panic!("TODO");
                     };
-                }
+                    registers[r1_idx]
+                };
             },
 
             // Exception, Interrupt
@@ -164,7 +203,7 @@ pub fn parse(mut tokens: Tokens) {
                 match registers[2] {  // v0
                     // print_int
                     1  => {
-                        print!("{}", registers[4]);  // a0
+                        print!("{}", tokens.get_int(&registers, 4, true));  // a0
                         std::io::stdout().flush().unwrap();
                     },
                     // print_string
@@ -194,47 +233,59 @@ pub fn parse(mut tokens: Tokens) {
         // expect TokenKind::EOL
         tokens.consume();
         tokens.expect_eol().unwrap();
-    }
 
-    // Display all registers
-    // `DEBUG=1 cargo run`
-    if std::env::var("DEBUG").is_ok() {
-        println!("\n[Display all registers]");
-        for i in 0..8 {
-            for j in 0..4 {
-                print!("${:<2}:0x{:08x}\t", i+j*8, registers[i+j*8]);
-            }
-            println!("");
+        if std::env::var("REGISTER_TRACE").is_ok() {
+            display_register(&registers);
         }
     }
+
+    display_register(&registers);
+}
+
+// Display all registers
+fn display_register(registers: &[i32]) {
+    println!("\n================================================================");
+    for i in 0..8 {
+        for j in 0..4 {
+            if registers[i+j*8] == 0 {
+                print!(" ${:<2}:0x{:08x}\t", i+j*8, registers[i+j*8]);
+            } else {
+                print!(" ${:<2}:\x1b[31m0x{:08x}\x1b[m\t", i+j*8, registers[i+j*8]);
+            }
+            std::io::stdout().flush().unwrap();
+        }
+        println!();
+    }
+    println!("================================================================");
 }
 
 fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
 where
     F: Fn(i32, i32) -> i32,
 {
-    if let Some(_) = tokens.consume() {
-        if let Ok(rd_idx) = tokens.expect_register() {
-            registers[rd_idx] = {
-                let mut r1 = 0;
-                if let Some(_) = tokens.consume() {
-                    if let Ok(register_idx) = tokens.expect_register() {
-                        r1 = registers[register_idx];
-                    } else if let Ok(num) = tokens.expect_integer() {
-                        r1 = num;
-                    }
+    tokens.consume().unwrap();
+    if let Ok(rd_idx) = tokens.expect_register() {
+        registers[rd_idx] = {
+            let mut r1 = 0;
+            tokens.consume().unwrap();
+            if let Ok(register_idx) = tokens.expect_register() {
+                r1 = registers[register_idx];
+            } else if let Ok(num) = tokens.expect_integer() {
+                r1 = num;
+            }
+
+            let mut r2 = 0;
+            if tokens.consume().is_some() {
+                if let Ok(register_idx) = tokens.expect_register() {
+                    r2 = registers[register_idx];
+                } else if let Ok(num) = tokens.expect_integer() {
+                    r2 = num;
                 }
-                let mut r2 = 0;
-                if let Some(_) = tokens.consume() {
-                    if let Ok(register_idx) = tokens.expect_register() {
-                        r2 = registers[register_idx];
-                    } else if let Ok(num) = tokens.expect_integer() {
-                        r2 = num;
-                    }
-                }
-                fun(r1, r2)
-            };
-        }
+            } else {
+                // TODO
+            }
+            fun(r1, r2)
+        };
     }
 }
 
@@ -242,42 +293,36 @@ fn eval_constant<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
 where
     F: Fn(i32) -> i32,
 {
-    if let Some(_) = tokens.consume() {
-        let register_idx = tokens.expect_register().unwrap();
-        registers[register_idx] = {
-            let mut integer = 0;
-            if let Some(_) = tokens.consume() {
-                integer = tokens.expect_integer().unwrap();
-            }
-            fun(integer)
-        };
-    }
+    tokens.consume().unwrap();
+    let register_idx = tokens.expect_register().unwrap();
+    registers[register_idx] = {
+        tokens.consume().unwrap();
+        let integer = tokens.expect_integer().unwrap();
+        fun(integer)
+    };
 }
 
 fn eval_comparison<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
 where
     F: Fn(i32, i32) -> bool,
 {
-    if let Some(_) = tokens.consume() {
-        if let Ok(rd_idx) = tokens.expect_register() {
-            if let Some(_) = tokens.consume() {
-                if let Ok(rs_idx) = tokens.expect_register() {
-                    if let Some(_) = tokens.consume() {
-                        if let Ok(rt_idx) = tokens.expect_register() {
-                            registers[rd_idx] = if fun(registers[rs_idx], registers[rt_idx]) {
-                                1
-                            } else {
-                                0
-                            }
-                        } else {
-                            let num = tokens.expect_integer().unwrap();
-                            registers[rd_idx] = if fun(registers[rs_idx], num) {
-                                1
-                            } else {
-                                0
-                            }
-                        }
-                    }
+    tokens.consume().unwrap();
+    if let Ok(rd_idx) = tokens.expect_register() {
+        tokens.consume().unwrap();
+        if let Ok(rs_idx) = tokens.expect_register() {
+            tokens.consume().unwrap();
+            if let Ok(rt_idx) = tokens.expect_register() {
+                registers[rd_idx] = if fun(registers[rs_idx], registers[rt_idx]) {
+                    1
+                } else {
+                    0
+                }
+            } else {
+                let num = tokens.expect_integer().unwrap();
+                registers[rd_idx] = if fun(registers[rs_idx], num) {
+                    1
+                } else {
+                    0
                 }
             }
         }
@@ -288,40 +333,36 @@ fn eval_branch<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F) -> bool
 where
     F: Fn(i32, i32) -> bool,
 {
-    if let Some(_) = tokens.consume() {
-        if let Ok(rsrc1_idx) = tokens.expect_register() {
-            if let Some(_) = tokens.consume() {
-                if let Ok(rsrc2_idx) = tokens.expect_register() {
-                    if let Some(_) = tokens.consume() {
-                        if fun(registers[rsrc1_idx], registers[rsrc2_idx]) {
-                            let idx = tokens.expect_address().unwrap();
-                            tokens.goto(idx-1);
-                            return true;
-                        }
-                    }
-                } else if let Ok(num) = tokens.expect_integer() {
-                    if let Some(_) = tokens.consume() {
-                        if fun(registers[rsrc1_idx], num) {
-                            let idx = tokens.expect_address().unwrap();
-                            tokens.goto(idx-1);
-                            return true;
-                        }
-                    }
-                } else {
-                    // BEQZ, BGEZ, BGTZ, BLEZ, BLTZ, BNEZ
-                    let idx = tokens.expect_address().unwrap();
-                    if fun(registers[rsrc1_idx], 0) {
-                        tokens.goto(idx-1);
-                        return true;
-                    }
-                }
+    tokens.consume().unwrap();
+    if let Ok(rsrc1_idx) = tokens.expect_register() {
+        tokens.consume().unwrap();
+        if let Ok(rsrc2_idx) = tokens.expect_register() {
+            tokens.consume().unwrap();
+            if fun(registers[rsrc1_idx], registers[rsrc2_idx]) {
+                let idx = tokens.expect_address().unwrap();
+                tokens.goto(idx-1);
+                return true;
+            }
+        } else if let Ok(num) = tokens.expect_integer() {
+            tokens.consume().unwrap();
+            if fun(registers[rsrc1_idx], num) {
+                let idx = tokens.expect_address().unwrap();
+                tokens.goto(idx-1);
+                return true;
             }
         } else {
-            // B
+            // BEQZ, BGEZ, BGTZ, BLEZ, BLTZ, BNEZ
             let idx = tokens.expect_address().unwrap();
-            tokens.goto(idx-1);
-            return true;
+            if fun(registers[rsrc1_idx], 0) {
+                tokens.goto(idx-1);
+                return true;
+            }
         }
+    } else {
+        // B
+        let idx = tokens.expect_address().unwrap();
+        tokens.goto(idx-1);
+        return true;
     }
 
     false
@@ -330,39 +371,39 @@ where
 /// Return: can continue
 fn eval_jump(registers: &mut [i32], tokens: &mut Tokens, kind: InstructionKind) -> bool {
     match kind {
-        InstructionKind::J =>
-            if let Some(_) = tokens.consume() {
-                if let Ok(idx) = tokens.expect_address() {
-                    tokens.goto(idx-1);
+        InstructionKind::J => {
+            tokens.consume().unwrap();
+            if let Ok(idx) = tokens.expect_address() {
+                tokens.goto(idx-1);
+                return true;
+            }
+        },
+        InstructionKind::JAL => {
+            tokens.consume().unwrap();
+            if let Ok(idx) = tokens.expect_address() {
+                registers[31] = tokens.idx() as i32 + 1;  // $ra
+                tokens.goto(idx-1);
+                return true;
+            }
+        },
+        InstructionKind::JR => {
+            tokens.consume().unwrap();
+            if let Ok(idx) = tokens.expect_register() {
+                tokens.goto(registers[idx] as usize);
+                return true;
+            }
+        },
+        InstructionKind::JALR => {
+            tokens.consume().unwrap();
+            if let Ok(rs_idx) = tokens.expect_register() {
+                tokens.consume();
+                if let Ok(rd_idx) = tokens.expect_register() {
+                    registers[rd_idx] = tokens.idx() as i32 + 1;
+                    tokens.goto(rs_idx-1);
                     return true;
                 }
-            },
-        InstructionKind::JAL =>
-            if let Some(_) = tokens.consume() {
-                if let Ok(idx) = tokens.expect_address() {
-                    registers[31] = tokens.idx() as i32 + 1;  // $ra
-                    tokens.goto(idx-1);
-                    return true;
-                }
-            },
-        InstructionKind::JR =>
-            if let Some(_) = tokens.consume() {
-                if let Ok(idx) = tokens.expect_register() {
-                    tokens.goto(registers[idx] as usize);
-                    return true;
-                }
-            },
-        InstructionKind::JALR =>
-            if let Some(_) = tokens.consume() {
-                if let Ok(rs_idx) = tokens.expect_register() {
-                    tokens.consume();
-                    if let Ok(rd_idx) = tokens.expect_register() {
-                        registers[rd_idx] = tokens.idx() as i32 + 1;
-                        tokens.goto(rs_idx-1);
-                        return true;
-                    }
-                }
-            },
+            }
+        },
         _ => panic!("eval_jump(): invalid InstructionKind: {:?}", kind),
     }
 

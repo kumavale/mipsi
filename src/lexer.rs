@@ -54,39 +54,37 @@ fn is_stack(word: &str) -> Result<(RegisterKind, usize, i32), String> {
         return  Err(errmsg);
     }
     let mut add = 0;
-    let mut s = word.clone().to_string();
+    let mut s = word.to_string();
     s.remove(s.len()-1);  // Delete ')'
     let mut s_chars = s.chars();
     while let Some(c) = s_chars.next() {
         let num = c as i32 - 48;
         if 0 <= num && num <= 9 {
             add = add * 10 + num;
-        } else {
-            if c == '(' {
-                let mut reg = String::new();
-                while let Some(c) = s_chars.next() {
-                    reg = format!("{}{}", reg, c);
-                }
-                let (reg, idx) = is_register(&reg)?;
-                return Ok((reg, idx, add));
-            } else {
-                break;
+        } else if c == '(' {
+            let mut reg = String::new();
+            while let Some(c) = s_chars.next() {
+                reg = format!("{}{}", reg, c);
             }
+            let (reg, idx) = is_register(&reg)?;
+            return Ok((reg, idx, add));
+        } else {
+            break;
         }
     }
     Err(errmsg)
 }
 
 fn is_label(word: &str) -> bool {
-    word.ends_with(":")
+    word.ends_with(':')
 }
 
 fn is_indicate(word: &str) -> bool {
-    word.starts_with(".")
+    word.starts_with('.')
 }
 
 fn is_comment(word: &str) -> bool {
-    word.starts_with("#")
+    word.starts_with('#')
 }
 
 fn split_words(line: &str) -> Vec<String> {
@@ -184,7 +182,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
     //println!("{:?}", words);
 
     // Skip blank line either comment line
-    if words.len() == 0 || words.len() > 0 && words[0].starts_with("#") {
+    if words.is_empty() || !words.is_empty() && words[0].starts_with('#') {
         return;
     }
 
@@ -542,7 +540,7 @@ main: ## Start of code section
     while let Some(token) = tokens.consume() {
         print!("{:?}", token);
         if token.kind == TokenKind::EOL {
-            println!("");
+            println!();
         }
     }
 }

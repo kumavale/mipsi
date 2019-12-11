@@ -111,10 +111,10 @@ pub struct Token {
 
 #[derive(Debug)]
 pub struct Tokens {
-    token: Vec<Token>,    // Token's vector
-    idx: usize,           // Current index
-    foremost: bool,       // Foremost
-    length: usize,        // Token length
+    pub token: Vec<Token>,  // Token's vector
+    idx: usize,             // Current index
+    foremost: bool,         // Foremost
+    length: usize,          // Token length
 }
 
 //pub type Token = (TokenKind, u32);
@@ -143,23 +143,40 @@ impl Tokens {
     pub fn consume(&mut self) -> Option<Token> {
         if self.foremost {
             self.foremost = false;
-            Some(self.token[0].clone())
-        } else {
-            if self.idx+1 < self.length {
-                self.idx += 1;
-                Some(self.token[self.idx].clone())
-            } else {
-                None
+
+            // `TOKEN_TRACE=1 cargo run`
+            if std::env::var("TOKEN_TRACE").is_ok() {
+                println!("line:index, kind");
+                println!("{:?}:{:?},\t{:?}", &self.token[0].line, &self.idx, &self.token[0].kind);
             }
+
+            Some(self.token[0].clone())
+        } else if self.idx+1 < self.length {
+            self.idx += 1;
+
+            // `TOKEN_TRACE=1 cargo run`
+            if std::env::var("TOKEN_TRACE").is_ok() {
+                println!("{:?}:{:?},\t{:?}", &self.token[self.idx].line, &self.idx,  &self.token[self.idx].kind);
+            }
+
+            Some(self.token[self.idx].clone())
+        } else {
+            // `TOKEN_TRACE=1 cargo run`
+            if std::env::var("TOKEN_TRACE").is_ok() {
+                println!("EOF");
+            }
+
+            None
         }
     }
 
-    #[allow(dead_code)]
-    pub fn get_token(&self) -> Token {
-        self.token[self.idx].clone()
-    }
-
     pub fn goto(&mut self, idx: usize) {
+        // `TOKEN_TRACE=1 cargo run`
+        if std::env::var("TOKEN_TRACE").is_ok() {
+            println!(" |\n | GOTO: {:?}:{:?},\t{:?}\n |",
+                &self.token[idx+1].line, idx+1,  &self.token[idx+1].kind);
+        }
+
         self.idx = idx;
     }
 
@@ -172,10 +189,27 @@ impl Tokens {
     }
 
     /// argument1: self
+    /// argument2: label index + array index => .word, .byte or stack
+    /// argument3: is register: true, is_static: false
+    pub fn get_int(&self, registers: &[i32], idx: i32, is_register: bool) -> i32 {
+        if !is_register {
+            if let TokenKind::INDICATE(IndicateKind::word(word)) = self.token[(idx+1) as usize].clone().kind {
+                word
+            } else if let TokenKind::INDICATE(IndicateKind::byte(byte)) = self.token[(idx+1) as usize].clone().kind {
+                byte as i32
+            } else {
+                registers[(idx) as usize]
+            }
+        } else {
+            registers[idx as usize]
+        }
+    }
+
+    /// argument1: self
     /// argument2: label index => String or u8(ascii)
     pub fn get_string(&self, idx: i32) -> String {
         if let TokenKind::INDICATE(IndicateKind::asciiz(asciiz)) = self.token[(idx+1) as usize].clone().kind {
-            return asciiz;
+            asciiz
         } else if let TokenKind::INDICATE(IndicateKind::byte(byte)) = self.token[(idx+1) as usize].clone().kind {
             let mut idx: usize = (idx + 2) as usize;
             let mut asciiz = format!("{}", byte as char);
@@ -188,9 +222,9 @@ impl Tokens {
                 asciiz = format!("{}{}", asciiz, byte as char);
                 idx += 1;
             }
-            return asciiz;
+            asciiz
         } else {
-            return "".to_string();
+            "".to_string()
         }
     }
 
@@ -199,7 +233,7 @@ impl Tokens {
         if let TokenKind::ADDRESS(s) = self.token[self.idx].clone().kind {
             for t in &self.token {
                 if let TokenKind::LABEL(name, idx) = &t.kind {
-                    if &*s == &*name {
+                    if *s == *name {
                         return Ok(*idx);
                     }
                 }
