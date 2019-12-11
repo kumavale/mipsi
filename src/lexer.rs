@@ -300,6 +300,12 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                                 };
                                 break;
                             },
+                            ".space" => {
+                                // TODO
+                                let length = words.next().unwrap().parse::<usize>().unwrap();
+                                TokenKind::INDICATE(IndicateKind::space(Vec::with_capacity(length)))
+                            },
+                            ".ascii" |
                             ".asciiz" => {
                                 let s = words.next().unwrap().to_string();
                                 TokenKind::INDICATE(IndicateKind::asciiz(s))
@@ -353,6 +359,8 @@ main:
 w:  .word 42, 0, 1, 2, 3
 b:  .byte 'a', 'i', 'u', 'e', 'o'
 s:  .asciiz \"string\"
+n:  .space 256
+
 
 # Hello, World!
 .data ## Data declaration section
@@ -367,7 +375,6 @@ main: ## Start of code section
                         # syscall takes its arguments from $a0, $a1, ...
     li $v0, 10          # terminate program
     syscall
-
 ";
 
     let mut tokens: Tokens = Tokens::new();
@@ -507,16 +514,24 @@ main: ## Start of code section
     assert_eq!(tokens.consume_kind(), TokenKind::LABEL("s".to_string(), 126));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("string".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("n".to_string(), 129));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::space(Vec::new())));
+    if let TokenKind::INDICATE(IndicateKind::space(s)) = &mut tokens.token[130].kind {
+        s.push(1); s.push(2); s.push(3);
+        assert_eq!(&s[..], [1, 2, 3]);
+    }
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+
 
     // Hello World
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("out_string".to_string(), 131));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("out_string".to_string(), 134));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("Hello, World!\n".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::text));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 136));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 139));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LI));
     assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::v0, 2));

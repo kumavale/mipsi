@@ -70,6 +70,7 @@ pub enum IndicateKind {
     globl,           // Ignore
     word(i32),       // Number(32-bit)
     byte(u8),        // 1 char(8-bit)
+    space(Vec<u8>),  // n byte
     asciiz(String),  // String
 }
 
@@ -223,6 +224,8 @@ impl Tokens {
                 idx += 1;
             }
             asciiz
+        } else if let TokenKind::INDICATE(IndicateKind::space(space)) = self.token[(idx+1) as usize].clone().kind {
+            String::from_utf8(space).unwrap()
         } else {
             "".to_string()
         }

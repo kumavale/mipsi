@@ -141,8 +141,6 @@ pub fn parse(mut tokens: Tokens) {
                         loop {
                             if 0 <= l_idx - cnt*4 && l_idx - cnt*4 < tokens.token.len() as i32 {
                                 if let TokenKind::LABEL(_, idx) = tokens.token[(l_idx-cnt*4) as usize].kind {
-                                    //dbg!(l_idx - cnt*4);
-                                    //println!("\t\t\tl_idx:{}, cnt:{}, cnt*4={}", l_idx, cnt, cnt*4);
                                     if let Some(a) = addresses[r_idx] {
                                         if idx as i32 == a {
                                             break;
@@ -152,15 +150,12 @@ pub fn parse(mut tokens: Tokens) {
                             }
                             cnt += 1;
                         }
-                        //dbg!(cnt);
                         registers[register_idx] = tokens.get_int(&registers, l_idx-cnt*4 + cnt, false);
-                        //dbg!(registers[register_idx]);
 
-                        // stack index
+                    // stack index
                     } else {
                         let stack_idx = idx as usize;
                         if stack.len() <= stack_idx {
-                            //dbg!(stack_idx);
                             stack.resize(stack_idx+1, 0);
                         }
                         registers[register_idx] = stack[stack_idx];
@@ -201,28 +196,41 @@ pub fn parse(mut tokens: Tokens) {
             // Exception, Interrupt
             InstructionKind::SYSCALL => {
                 match registers[2] {  // v0
-                    // print_int
+                    // print_int: $a0=integer
                     1  => {
-                        print!("{}", tokens.get_int(&registers, 4, true));  // a0
+                        print!("{}", tokens.get_int(&registers, 4, true));  // $a0
                         std::io::stdout().flush().unwrap();
                     },
-                    // print_string
+                    // print_string: $a0=string(label)
                     4  => {
-                        print!("{}", tokens.get_string(registers[4]));  // a0
+                        print!("{}", tokens.get_string(registers[4]));  // $a0
                         std::io::stdout().flush().unwrap();
                     },
-                    // read_int
+                    // read_int: return $v0
                     5  => {
                         let mut input = String::new();
                         std::io::stdin().read_line(&mut input).unwrap();
-                        registers[2] = input.trim().parse::<i32>().unwrap();
+                        registers[2] = input.trim().parse::<i32>().unwrap();  // $v0
+                    },
+                    // read_string: $a0=buffer, $a1=length.  write buffer
+                    8  => {
+                        let mut input = String::new();
+                        std::io::stdin().read_line(&mut input).unwrap();
+                        if let TokenKind::INDICATE(IndicateKind::space(s)) =
+                            &mut tokens.token[registers[4] as usize + 1].kind
+                        {
+                            // ignore over reserve byte space
+                            s.append(&mut input.into_bytes());
+                        } else {
+                            panic!("invalid address for .space");
+                        }
                     },
                     // exit
                     10 => break,
 
                     // My define
                     // print_int + '\n'
-                    11  => println!("{}", registers[4]),  // a0
+                    11  => println!("{}", tokens.get_int(&registers, 4, true)),  // $a0
                     _ => (),
                 }
             },
