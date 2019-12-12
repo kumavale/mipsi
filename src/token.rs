@@ -204,6 +204,14 @@ impl Tokens {
         &mut self.token[self.idx].kind
     }
 
+    pub fn next(&self) -> Option<Token> {
+        if self.idx + 1 < self.length {
+            Some(self.token[self.idx+1].clone())
+        } else {
+            None
+        }
+    }
+
     /// Get data index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
     pub fn expect_address(&self) -> Result<usize, String> {
         if let TokenKind::ADDRESS(s) = self.token[self.idx].clone().kind {

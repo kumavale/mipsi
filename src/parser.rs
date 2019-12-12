@@ -650,7 +650,7 @@ pub fn get_string(data: &Vec<u8>, stack: &Vec<u8>, index: i32) -> String {
 fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
 
     // Check all tokens
-    'outer: while tokens.consume().is_some() {
+    while tokens.consume().is_some() {
 
         // Ignore except .data segment
         if TokenKind::INDICATE(IndicateKind::data) == *tokens.kind() {
@@ -681,32 +681,26 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                 // TokenKind::LABEL(usize) = data.len() + 1
                 if let TokenKind::LABEL(_, _, ref mut index) = &mut tokens.kind() {
                     *index = Some(data.len() + 1);
+                    if tokens.next().unwrap().kind == TokenKind::EOL {
+                        tokens.consume().unwrap();
+                    }
                 } else {
                     break;
                 }
 
                 // until Label or .text
-                while tokens.consume().is_some() {
+                while let Some(token) = tokens.consume() {
+                    // ignore EOL
+                    if token.kind == TokenKind::EOL {
+                        break;
+                    }
+
                     if let TokenKind::LABEL(_, _, _) = *tokens.kind() {
                         break;
                     }
                     if TokenKind::INDICATE(IndicateKind::text) == *tokens.kind() {
                         break;
                     }
-
-                    // ignore EOL
-                    loop {
-                        if let Some(token) = tokens.consume() {
-                            if token.kind == TokenKind::EOL {
-                                continue;
-                            } else {
-                                break;
-                            }
-                        } else {
-                            break 'outer;
-                        }
-                    }
-
 
                     match tokens.kind() {
                         // Big Endian
