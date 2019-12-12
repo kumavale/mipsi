@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # Run all example
-cargo run ./arithmetic_progression.asm
-cargo run ./fibonacci.asm
-cargo run ./fibonacci2.asm
-cargo run ./function.asm
-cargo run ./hello.asm
-cargo run ./loop.asm
-echo "10" | cargo run ./non_recursive_fibonacci.asm
-cargo run ./print_array_contents.asm
-echo "test" | cargo run ./read_string.asm
+cargo run ./example/arithmetic_progression.asm
+cargo run ./example/fibonacci.asm
+cargo run ./example/fibonacci2.asm
+cargo run ./example/function.asm
+cargo run ./example/hello.asm
+cargo run ./example/loop.asm
+echo "10" | cargo run ./example/non_recursive_fibonacci.asm
+cargo run ./example/print_array_contents.asm
+echo "test" | cargo run ./example/read_string.asm
+
