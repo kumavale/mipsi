@@ -2,18 +2,26 @@ use std::io::Write;
 
 use super::token::*;
 
+
 pub fn parse(mut tokens: Tokens) {
 
     let mut registers: [i32; 32] = [0; 32];
-    let mut addresses: [Option<i32>; 32] = [None; 32];
-    let mut stack = Vec::new();
+    let mut addresses: [Option<i32>; 32] = [None; 32];  // TODO delete
+
+    // let **registers = { &zero, &at, ...};
+
+    let mut data:  Vec<u8> = Vec::new();
+    let mut stack: Vec<u8> = vec![0];
+
+    data_analysis(&mut tokens, &mut data);
+    println!("data: {:?}", data);
 
     #[allow(unused)]
     while let Some(token) = tokens.consume() {
         //println!("{:?}", token); continue;
 
-        // Skip LABEL, INDICATE and EOL
-        if let TokenKind::LABEL(_, _) = tokens.kind() {
+        //// Skip LABEL, INDICATE and EOL
+        if let TokenKind::LABEL(_, _, _) = tokens.kind() {
             tokens.consume().unwrap();
             if tokens.expect_eol().is_ok() { continue; }
         }
@@ -52,12 +60,6 @@ pub fn parse(mut tokens: Tokens) {
             InstructionKind::SRL |
             InstructionKind::SRLV =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 >> y) as i32),
-            //InstructionKind::ROL =>
-            //    eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 >> y) as i32),
-            //    eval_arithmetic(&mut registers, &mut tokens, |x, y| x << y),
-            //    eval_arithmetic(&mut registers, &mut tokens, |x, y| x | y),
-            //InstructionKind::ROR =>
-            //    eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 >> y) as i32),
 
             InstructionKind::AND |
             InstructionKind::ANDI =>
@@ -137,57 +139,47 @@ pub fn parse(mut tokens: Tokens) {
                 registers[register_idx] = label_idx;
                 addresses[register_idx] = Some(label_idx);
             },
-            InstructionKind::LW => {
+            InstructionKind::LW => {  // Rt = *((int*)address) (32bit)
                 tokens.consume().unwrap();
                 let register_idx = tokens.expect_register().unwrap();
                 tokens.consume().unwrap();
-                if let Ok((r_idx, s_idx)) = tokens.expect_stack() {
-                    let idx = -(registers[r_idx] + s_idx);
+                if let Ok((r_idx, s_idx)) = tokens.expect_stack() { // data or stack
+                    let idx = registers[r_idx] + s_idx;
 
-                    let is_tokens_idx = if idx == 0 {
-                        // UNSTABLE
-                        // TODO
-                        if let Some(idx) =  addresses[r_idx] {
-                            idx == 0
-                        } else {
-                            false
-                        }
+                    let is_data_idx = if idx < 0 {
+                        false
+                    } else if 0 < idx {
+                        true
                     } else {
-                        idx < 0
+                        panic!("TODO");
                     };
 
-                    // tokens index
-                    if is_tokens_idx {
-                        let l_idx = registers[r_idx];  // label index
-                        let mut cnt: i32 = 0;
-                        loop {
-                            if 0 <= l_idx - cnt*4 && l_idx - cnt*4 < tokens.token.len() as i32 {
-                                if let TokenKind::LABEL(_, idx) = tokens.token[(l_idx-cnt*4) as usize].kind {
-                                    if let Some(a) = addresses[r_idx] {
-                                        if idx as i32 == a {
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                            cnt += 1;
-                        }
-                        registers[register_idx] = tokens.get_int(&registers, l_idx-cnt*4 + cnt, false);
+                    // data index
+                    if is_data_idx {
+                        let idx = registers[r_idx] as isize;
+                        registers[register_idx] = get_int(&data, &stack, idx);
 
                     // stack index
                     } else {
-                        let stack_idx = idx as usize;
+                        let stack_idx = (-idx) as usize;
                         if stack.len() <= stack_idx {
                             stack.resize(stack_idx+1, 0);
                         }
-                        registers[register_idx] = stack[stack_idx];
+                        registers[register_idx] = {
+                            let mut int = 0;
+                            int |= (stack[stack_idx-3] as i32) << 24;
+                            int |= (stack[stack_idx-2] as i32) << 16;
+                            int |= (stack[stack_idx-1] as i32) <<  8;
+                            int |= (stack[stack_idx-0] as i32);
+                            int
+                        };
                     }
                 } else {
-                    let idx = tokens.expect_address().unwrap() as i32;
-                    registers[register_idx] = tokens.get_int(&registers, idx, false);
+                    let idx = tokens.expect_address().unwrap() as isize;
+                    registers[register_idx] = get_int(&data, &stack, idx);
                 }
             },
-            InstructionKind::SW => {
+            InstructionKind::SW => {  // *((int*)address) = Rt (32bit)
                 tokens.consume().unwrap();
                 let register_idx = tokens.expect_register().unwrap();
                 tokens.consume().unwrap();
@@ -196,7 +188,10 @@ pub fn parse(mut tokens: Tokens) {
                 if stack.len() <= stack_idx {
                     stack.resize(stack_idx+1, 0);
                 }
-                stack[stack_idx] = registers[register_idx];
+                stack[stack_idx-3] = (registers[register_idx]>>24) as u8;
+                stack[stack_idx-2] = (registers[register_idx]>>16) as u8;
+                stack[stack_idx-1] = (registers[register_idx]>> 8) as u8;
+                stack[stack_idx-0] = (registers[register_idx]    ) as u8;
             },
 
             // Transfer
@@ -220,12 +215,12 @@ pub fn parse(mut tokens: Tokens) {
                 match registers[2] {  // v0
                     // print_int: $a0=integer
                     1  => {
-                        print!("{}", tokens.get_int(&registers, 4, true));  // $a0
+                        print!("{}", registers[4]);  // $a0
                         std::io::stdout().flush().unwrap();
                     },
                     // print_string: $a0=string(label)
                     4  => {
-                        print!("{}", tokens.get_string(registers[4]));  // $a0
+                        print!("{}", get_string(&data, &stack, registers[4]));  // $a0
                         std::io::stdout().flush().unwrap();
                     },
                     // read_int: return $v0
@@ -238,13 +233,16 @@ pub fn parse(mut tokens: Tokens) {
                     8  => {
                         let mut input = String::new();
                         std::io::stdin().read_line(&mut input).unwrap();
-                        if let TokenKind::INDICATE(IndicateKind::space(s)) =
-                            &mut tokens.token[registers[4] as usize + 1].kind
-                        {
-                            // ignore over reserve byte space
-                            s.append(&mut input.into_bytes());
-                        } else {
-                            panic!("invalid address for .space");
+                        let mut index = registers[4] as usize - 1;
+                        if index >= data.len() {
+                            panic!("invalid address for .space: {}", registers[4]);
+                        }
+                        for (i, ch) in input.into_bytes().iter().enumerate() {
+                            if i >= registers[5] as usize {
+                                break;
+                            }
+                            data[index] = *ch;
+                            index += 1;
                         }
                     },
                     // exit
@@ -252,8 +250,15 @@ pub fn parse(mut tokens: Tokens) {
 
                     // My define
                     // print_int + '\n'
-                    11  => println!("{}", tokens.get_int(&registers, 4, true)),  // $a0
-                    _ => (),
+                    128 => println!("{}", registers[4]),  // $a0
+                    // print_int(unsigned)
+                    //129 => println!("{}", registers[4]),  // $a0
+                    // print_int + '\n'
+                    //130 => println!("{}", registers[4]),  // $a0
+                    // read_char (without enter)
+                    //131 => (),
+
+                    _ => println!("SYSCALL: invalid code: {}", registers[2]),
                 }
             },
             InstructionKind::NOP => (),  // Do nothing
@@ -264,11 +269,15 @@ pub fn parse(mut tokens: Tokens) {
         tokens.consume();
         tokens.expect_eol().unwrap();
 
+        if std::env::var("STACK_TRACE").is_ok() {
+            display_stack(&stack);
+        }
         if std::env::var("REGISTER_TRACE").is_ok() {
             display_register(&registers);
         }
     }
 
+    println!("\ndata: {:?}", data);
     display_register(&registers);
 }
 
@@ -287,6 +296,10 @@ fn display_register(registers: &[i32]) {
         println!();
     }
     println!("================================================================");
+}
+
+fn display_stack(stack: &Vec<u8>) {
+    println!("stack: {:?}", stack);
 }
 
 fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
@@ -369,28 +382,28 @@ where
         if let Ok(rsrc2_idx) = tokens.expect_register() {
             tokens.consume().unwrap();
             if fun(registers[rsrc1_idx], registers[rsrc2_idx]) {
-                let idx = tokens.expect_address().unwrap();
+                let idx = tokens.expect_label().unwrap();
                 tokens.goto(idx-1);
                 return true;
             }
         } else if let Ok(num) = tokens.expect_integer() {
             tokens.consume().unwrap();
             if fun(registers[rsrc1_idx], num) {
-                let idx = tokens.expect_address().unwrap();
+                let idx = tokens.expect_label().unwrap();
                 tokens.goto(idx-1);
                 return true;
             }
         } else {
             // BEQZ, BGEZ, BGTZ, BLEZ, BLTZ, BNEZ
-            let idx = tokens.expect_address().unwrap();
+            let idx = tokens.expect_label().unwrap();
             if fun(registers[rsrc1_idx], 0) {
                 tokens.goto(idx-1);
                 return true;
             }
         }
     } else {
-        // B
-        let idx = tokens.expect_address().unwrap();
+        // B // TODO
+        let idx = tokens.expect_label().unwrap();
         tokens.goto(idx-1);
         return true;
     }
@@ -403,14 +416,14 @@ fn eval_jump(registers: &mut [i32], tokens: &mut Tokens, kind: InstructionKind) 
     match kind {
         InstructionKind::J => {
             tokens.consume().unwrap();
-            if let Ok(idx) = tokens.expect_address() {
+            if let Ok(idx) = tokens.expect_label() {
                 tokens.goto(idx-1);
                 return true;
             }
         },
         InstructionKind::JAL => {
             tokens.consume().unwrap();
-            if let Ok(idx) = tokens.expect_address() {
+            if let Ok(idx) = tokens.expect_label() {
                 registers[31] = tokens.idx() as i32 + 1;  // $ra
                 tokens.goto(idx-1);
                 return true;
@@ -476,7 +489,7 @@ fn test_parse() {
     tokens.push(TokenKind::EOL, 28);
     tokens.push(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), 29);
     tokens.push(TokenKind::EOL, 30);
-    tokens.push(TokenKind::LABEL("loop".to_string(), 30), 31);
+    tokens.push(TokenKind::LABEL("loop".to_string(), 30), 31, None);
     tokens.push(TokenKind::EOL, 32);
     tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI), 33);
     tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 34);
@@ -514,5 +527,165 @@ fn test_parse() {
     tokens.push(TokenKind::EOL, 66);
 
     parse(tokens);
+}
+
+/// Return signed integer (32-bit)
+///
+/// # Example
+///
+/// ```rust
+/// let int: i32 = get_int(&data, &stack, registers[4]);
+/// ```
+///
+//// argument1: memory: &<T>  =>  registers:&[i32] | stack:&Vec<u8> | data:&Vec<u8>
+/// argument1: data:&Vec<u8>
+/// argument2: stack:&Vec<u8>
+/// argument3: index: isize  =>  stack(-) | data(+)
+pub fn get_int(data: &Vec<u8>, stack: &Vec<u8>, index: isize) -> i32 {
+
+    // stack
+    if index < 0 {
+        let index = (-index - 1) as usize;
+        let octet1 = stack[index+0] as i32;
+        let octet2 = stack[index+1] as i32;
+        let octet3 = stack[index+2] as i32;
+        let octet4 = stack[index+3] as i32;
+
+        // Big Endian
+        let mut int: i32 = 0;
+        int |= octet1 << 24;
+        int |= octet2 << 16;
+        int |= octet3 <<  8;
+        int |= octet4;
+
+        int
+
+    // data
+    } else if 0 < index {
+        let index = ( index - 1) as usize;
+        let octet1 = data[index+0] as i32;
+        let octet2 = data[index+1] as i32;
+        let octet3 = data[index+2] as i32;
+        let octet4 = data[index+3] as i32;
+
+        // Big Endian
+        let mut int: i32 = 0;
+        int |= octet1 << 24;
+        int |= octet2 << 16;
+        int |= octet3 <<  8;
+        int |= octet4;
+
+        int
+
+    } else {
+        panic!(format!("get_int(): invalid index: {}", index));
+    }
+}
+
+pub fn get_string(data: &Vec<u8>, stack: &Vec<u8>, index: i32) -> String {
+    // stack
+    if index < 0 {
+        let mut i = (-index - 1) as usize;
+        let mut s = String::new();
+
+        while stack[i] != 0 {
+            s = format!("{}{}", s, stack[i] as char);
+            i += 1;
+        }
+        s
+
+    // data
+    } else if 0 < index {
+        let mut i = (index - 1) as usize;
+        let mut s = String::new();
+
+        while data[i] != 0 {
+            s = format!("{}{}", s, data[i] as char);
+            i += 1;
+        }
+        s
+
+    } else {
+        panic!(format!("get_string(): invalid index: {}", index));
+    }
+}
+
+/// Push to data: &Vec<u8> from .data segment's data
+fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
+
+    // Check all tokens
+    while tokens.consume().is_some() {
+
+        // Ignore .text segment
+        if TokenKind::INDICATE(IndicateKind::data) == *tokens.kind() {
+
+            // consume EOL
+            tokens.consume().unwrap();
+            tokens.expect_eol().unwrap();
+
+            // until .text segment
+            while tokens.consume().is_some() {
+                if TokenKind::INDICATE(IndicateKind::text) == *tokens.kind() {
+                    break;
+                }
+
+                // TokenKind::LABEL(usize) = data.len() + 1
+                if let TokenKind::LABEL(_, _, ref mut index) = &mut tokens.kind() {
+                    *index = Some(data.len() + 1);
+                } else {
+                    break;
+                }
+
+                // until EOL
+                while tokens.consume().is_some() {
+                    if TokenKind::EOL == *tokens.kind() {
+                        break;
+                    }
+
+                    match tokens.kind() {
+                        // Big Endian
+                        TokenKind::INDICATE(IndicateKind::word(w)) => {
+                            //data.push(((*w>>24) & (std::u32::MAX - 255)) as u8);
+                            //data.push(((*w>>16) & (std::u32::MAX - 255)) as u8);
+                            //data.push(((*w>> 8) & (std::u32::MAX - 255)) as u8);
+                            //data.push(( *w      & (std::u32::MAX - 255)) as u8);
+                            data.push((*w>>24) as u8);
+                            data.push((*w>>16) as u8);
+                            data.push((*w>> 8) as u8);
+                            data.push( *w      as u8);
+                        },
+                        TokenKind::INDICATE(IndicateKind::byte(b)) => {
+                            data.push(*b);
+                        },
+                        TokenKind::INDICATE(IndicateKind::space(s)) => {
+                            for _ in 0..*s {
+                                data.push(0);
+                            }
+                        },
+                        TokenKind::INDICATE(IndicateKind::ascii(s)) => {
+                            for ch in s.bytes() {
+                                data.push(ch);
+                            }
+                        },
+                        TokenKind::INDICATE(IndicateKind::asciiz(s)) => {
+                            for ch in s.bytes() {
+                                data.push(ch);
+                            }
+                            data.push(0);
+                        },
+                        TokenKind::INDICATE(IndicateKind::align(n)) => {
+                            // TODO
+                            // Align 2^n
+                            //data.len() % 
+                        },
+                        _ => (),
+                    }
+                }
+            }
+        }
+    }
+
+    data.push(0);
+    tokens.reset();
 }
 

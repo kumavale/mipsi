@@ -16,7 +16,7 @@ main:
     blt $a0, 2, exit
 
     move $t5, $a0
-    li $v0, 11
+    li $v0, 128
     li $a0, 0
     syscall
     li $a0, 1
@@ -81,7 +81,7 @@ return1:
 
 print_output:
     move $t5, $a0
-    li $v0, 11
+    li $v0, 128
     move $a0, $t1
     syscall
     move $a0, $t5

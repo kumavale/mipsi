@@ -17,8 +17,6 @@ pub enum InstructionKind {
     SRAV,     // Rd, Rs, Rt    | Rd = Rs >> Rt
     SRL,      // Rd, Rs, Shamt | Rd = Rs >> Shamt
     SRLV,     // Rd, Rs, Rt    | Rd = Rs >> Rt
-    ROL,      // Rd, Rs, Rt    | Rd = left rotate
-    ROR,      // Rd, Rs, Rt    | Rd = right rotate
 
     AND,      // Rd, Rs, Rt    | Rd = Rs & Rt
     ANDI,     // Rt, Rs, Imm   | Rt = Rs & Imm
@@ -80,10 +78,12 @@ pub enum IndicateKind {
     text,            // Text space start
     data,            // Data space start
     globl,           // Ignore
-    word(i32),       // Number(32-bit)
+    word(u32),       // Number(32-bit)
     byte(u8),        // 1 char(8-bit)
-    space(Vec<u8>),  // n byte
+    space(u32),      // n byte
+    ascii(String),   // String
     asciiz(String),  // String
+    align(u8),       // Align
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -106,14 +106,14 @@ pub enum RegisterKind {
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
     INSTRUCTION(InstructionKind),
-    INDICATE(IndicateKind),           // Pseudo instruction
-    INTEGER(i32),                     // Immediate
-    REGISTER(RegisterKind, usize),    // (_, Index)
-    STACK(RegisterKind, usize, i32),  // (_, Append index)
-    LABEL(String, usize),             // (Literal, Index)
-    ADDRESS(String),                  // Literal
-    INVALID(String),                  // Invalid string
-    EOL,                              // End of Line
+    INDICATE(IndicateKind),               // Pseudo instruction
+    INTEGER(i32),                         // Immediate
+    REGISTER(RegisterKind, usize),        // (_, Index)
+    STACK(RegisterKind, usize, i32),      // (_, Append index)
+    LABEL(String, usize, Option<usize>),  // (Literal, Token index, Data index)
+    ADDRESS(String),                      // Literal
+    INVALID(String),                      // Invalid string
+    EOL,                                  // End of Line
 }
 
 #[derive(Clone, Debug)]
@@ -197,57 +197,33 @@ impl Tokens {
         self.idx
     }
 
-    pub fn kind(&self) -> TokenKind {
-        self.token[self.idx].kind.clone()
+    pub fn kind(&mut self) -> &mut TokenKind {
+        &mut self.token[self.idx].kind
     }
 
-    /// argument1: self
-    /// argument2: label index + array index => .word, .byte or stack
-    /// argument3: is register: true, is_static: false
-    pub fn get_int(&self, registers: &[i32], idx: i32, is_register: bool) -> i32 {
-        if !is_register {
-            if let TokenKind::INDICATE(IndicateKind::word(word)) = self.token[(idx+1) as usize].clone().kind {
-                word
-            } else if let TokenKind::INDICATE(IndicateKind::byte(byte)) = self.token[(idx+1) as usize].clone().kind {
-                byte as i32
-            } else {
-                registers[(idx) as usize]
-            }
-        } else {
-            registers[idx as usize]
-        }
-    }
-
-    /// argument1: self
-    /// argument2: label index => String or u8(ascii)
-    pub fn get_string(&self, idx: i32) -> String {
-        if let TokenKind::INDICATE(IndicateKind::asciiz(asciiz)) = self.token[(idx+1) as usize].clone().kind {
-            asciiz
-        } else if let TokenKind::INDICATE(IndicateKind::byte(byte)) = self.token[(idx+1) as usize].clone().kind {
-            let mut idx: usize = (idx + 2) as usize;
-            let mut asciiz = format!("{}", byte as char);
-
-            // until 0 or TokenKind::EOL
-            while let TokenKind::INDICATE(IndicateKind::byte(byte)) = self.token[idx].clone().kind {
-                if byte == 0 {
-                    break;
-                }
-                asciiz = format!("{}{}", asciiz, byte as char);
-                idx += 1;
-            }
-            asciiz
-        } else if let TokenKind::INDICATE(IndicateKind::space(space)) = self.token[(idx+1) as usize].clone().kind {
-            String::from_utf8(space).unwrap()
-        } else {
-            "".to_string()
-        }
-    }
-
-    /// Get index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
+    /// Get data index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
     pub fn expect_address(&self) -> Result<usize, String> {
         if let TokenKind::ADDRESS(s) = self.token[self.idx].clone().kind {
             for t in &self.token {
-                if let TokenKind::LABEL(name, idx) = &t.kind {
+                if let TokenKind::LABEL(name, _, idx) = &t.kind {
+                    if *s == *name {
+                        return Ok((*idx).unwrap());
+                    }
+                }
+            }
+            let line = self.token[self.idx].line;
+            Err(format!("{}: invalid address: {}", line, s))
+        } else {
+            let t = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::ADDRESS(String). but got: {:?}", t.line, t.kind))
+        }
+    }
+
+    /// Get label index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
+    pub fn expect_label(&self) -> Result<usize, String> {
+        if let TokenKind::ADDRESS(s) = self.token[self.idx].clone().kind {
+            for t in &self.token {
+                if let TokenKind::LABEL(name, idx, _) = &t.kind {
                     if *s == *name {
                         return Ok(*idx);
                     }

@@ -19,9 +19,9 @@
 # ```
 
 main:
-    # loop from $t0 = 0 until 20
+    # loop from $t0 = 0 until 16
     move $t0, $0
-    loop: beq $t0, 20, exit
+    loop: beq $t0, 16, exit
 
     jal fibonacci
     jal print_output
@@ -34,7 +34,7 @@ exit:
 	syscall
 
 print_output:
-    li $v0, 11
+    li $v0, 128
     move $a0, $t1
     syscall
     jr $ra
