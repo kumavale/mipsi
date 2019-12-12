@@ -384,7 +384,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
 #[test]
 #[cfg(test)]
 fn test_tokenize() {
-    use std::io::{BufRead, BufReader};
+    use std::io::{BufRead, BufReader, Write};
 
     let input = "\
 # This is comment.
@@ -412,13 +412,16 @@ main:
     BEQZ BGEZ BGTZ BLEZ BLTZ BNEZ
     SLT SLTU SLTI SLTIU SEQ SGE SGEU SGT SGTU SLE SLEU SNE
     REM
-    .text .data .globl
+    .text .data .globl main
 w:  .word 42, 0, 1, 2, 3
 b:  .byte 'a', 'i', 'u', 'e', 'o'
 s:  .asciiz \"string\"
 n:  .space 256
     NOR NOT
     SLL SLLV SRA SRAV SRL SRLV
+    LB LH LW
+    .ascii \"string\"
+    .align 2
 
 # Hello, World!
 .data ## Data declaration section
@@ -553,7 +556,7 @@ main: ## Start of code section
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::text));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
-    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::globl));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::globl("main".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::LABEL("w".to_string(), 112, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(42)));
@@ -573,11 +576,7 @@ main: ## Start of code section
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("string".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::LABEL("n".to_string(), 129, None));
-    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::space(Vec::new())));
-    if let TokenKind::INDICATE(IndicateKind::space(s)) = &mut tokens.token[130].kind {
-        s.push(1); s.push(2); s.push(3);
-        assert_eq!(&s[..], [1, 2, 3]);
-    }
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::space(256)));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::NOR));
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::NOT));
@@ -589,16 +588,24 @@ main: ## Start of code section
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SRL));
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SRLV));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LB));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LH));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LW));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::ascii("string".to_string())));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::align(2)));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
 
     // Hello World
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("out_string".to_string(), 144, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("out_string".to_string(), 152, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("Hello, World!\n".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::text));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 149, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 157, None));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LI));
     assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::v0, 2));
@@ -621,6 +628,7 @@ main: ## Start of code section
     tokens.reset();
     while let Some(token) = tokens.consume() {
         print!("{:?}", token);
+        std::io::stdout().flush().unwrap();
         if token.kind == TokenKind::EOL {
             println!();
         }

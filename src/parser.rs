@@ -540,7 +540,7 @@ fn test_parse() {
     tokens.push(TokenKind::EOL, 28);
     tokens.push(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), 29);
     tokens.push(TokenKind::EOL, 30);
-    tokens.push(TokenKind::LABEL("loop".to_string(), 30), 31, None);
+    tokens.push(TokenKind::LABEL("loop".to_string(), 30, None), 31);
     tokens.push(TokenKind::EOL, 32);
     tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI), 33);
     tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 34);
@@ -563,19 +563,15 @@ fn test_parse() {
     tokens.push(TokenKind::INSTRUCTION(InstructionKind::JAL), 51);
     tokens.push(TokenKind::ADDRESS("fuga".to_string()), 52);
     tokens.push(TokenKind::EOL, 53);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SW), 54);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t4, 12), 55);
-    tokens.push(TokenKind::STACK(RegisterKind::sp, 29, 0), 56);
-    tokens.push(TokenKind::EOL, 57);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SLT), 58);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t0,  8), 59);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SLT), 54);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0,  8), 55);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t7, 15), 56);
+    tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 57);
+    tokens.push(TokenKind::EOL, 58);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::NOT), 59);
     tokens.push(TokenKind::REGISTER(RegisterKind::t7, 15), 60);
     tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 61);
     tokens.push(TokenKind::EOL, 62);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::NOT), 63);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t7, 15), 64);
-    tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 65);
-    tokens.push(TokenKind::EOL, 66);
 
     parse(tokens);
 }
