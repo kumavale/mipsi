@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: prepare
-      run: rustup add component clippy
+      run: rustup component add clippy
 
     - name: clippy
       run: cargo clippy --all-targets --all-features -- -W clippy::dbg_macro
