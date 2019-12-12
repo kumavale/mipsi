@@ -20,7 +20,7 @@ pub fn parse(mut tokens: Tokens) {
     while let Some(token) = tokens.consume() {
         //println!("{:?}", token); continue;
 
-        //// Skip LABEL, INDICATE and EOL
+        // Skip LABEL, INDICATE and EOL
         if let TokenKind::LABEL(_, _, _) = tokens.kind() {
             tokens.consume().unwrap();
             if tokens.expect_eol().is_ok() { continue; }
@@ -75,7 +75,7 @@ pub fn parse(mut tokens: Tokens) {
             InstructionKind::LI =>
                 eval_constant(&mut registers, &mut tokens, |x| x),
             InstructionKind::LUI =>
-                eval_constant(&mut registers, &mut tokens, |x| x & (std::i32::MAX - 65535)),
+                eval_constant(&mut registers, &mut tokens, |x| x & (std::i32::MAX - 65535)), // TODO u32?
 
             // Comparison
             InstructionKind::SLT |
@@ -130,7 +130,7 @@ pub fn parse(mut tokens: Tokens) {
             InstructionKind::JALR =>
                 if eval_jump(&mut registers, &mut tokens, InstructionKind::JALR) { continue; },
 
-            // Load, Store
+            // Load
             InstructionKind::LA => {
                 tokens.consume().unwrap();
                 let register_idx = tokens.expect_register().unwrap();
@@ -139,59 +139,35 @@ pub fn parse(mut tokens: Tokens) {
                 registers[register_idx] = label_idx;
                 addresses[register_idx] = Some(label_idx);
             },
-            InstructionKind::LW => {  // Rt = *((int*)address) (32bit)
-                tokens.consume().unwrap();
-                let register_idx = tokens.expect_register().unwrap();
-                tokens.consume().unwrap();
-                if let Ok((r_idx, s_idx)) = tokens.expect_stack() { // data or stack
-                    let idx = registers[r_idx] + s_idx;
+            InstructionKind::LB =>  // Rt = *((int*)address) (8bit)
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, 1),
+            InstructionKind::LH =>  // Rt = *((int*)address) (16bit)
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, 2),
+            InstructionKind::LW =>  // Rt = *((int*)address) (32bit)
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, 4),
 
-                    let is_data_idx = if idx < 0 {
-                        false
-                    } else if 0 < idx {
-                        true
-                    } else {
-                        panic!("TODO");
-                    };
-
-                    // data index
-                    if is_data_idx {
-                        let idx = registers[r_idx] as isize;
-                        registers[register_idx] = get_int(&data, &stack, idx);
-
-                    // stack index
-                    } else {
-                        let stack_idx = (-idx) as usize;
-                        if stack.len() <= stack_idx {
-                            stack.resize(stack_idx+1, 0);
-                        }
-                        registers[register_idx] = {
-                            let mut int = 0;
-                            int |= (stack[stack_idx-3] as i32) << 24;
-                            int |= (stack[stack_idx-2] as i32) << 16;
-                            int |= (stack[stack_idx-1] as i32) <<  8;
-                            int |= (stack[stack_idx-0] as i32);
-                            int
-                        };
-                    }
-                } else {
-                    let idx = tokens.expect_address().unwrap() as isize;
-                    registers[register_idx] = get_int(&data, &stack, idx);
-                }
-            },
+            // Store
             InstructionKind::SW => {  // *((int*)address) = Rt (32bit)
                 tokens.consume().unwrap();
                 let register_idx = tokens.expect_register().unwrap();
                 tokens.consume().unwrap();
-                let (r_idx, s_idx) = tokens.expect_stack().unwrap();
-                let stack_idx = -(registers[r_idx] + s_idx) as usize;
-                if stack.len() <= stack_idx {
-                    stack.resize(stack_idx+1, 0);
+                if let Ok((r_idx, s_idx)) = tokens.expect_stack() {
+                    let stack_idx = -(registers[r_idx] + s_idx) as usize;
+                    if stack.len() <= stack_idx {
+                        stack.resize(stack_idx+1, 0);
+                    }
+                    stack[stack_idx-3] = (registers[register_idx]>>24) as u8;
+                    stack[stack_idx-2] = (registers[register_idx]>>16) as u8;
+                    stack[stack_idx-1] = (registers[register_idx]>> 8) as u8;
+                    stack[stack_idx-0] = (registers[register_idx]    ) as u8;
+                } else {
+                    let (r_idx, d_idx) = tokens.expect_data().unwrap();
+                    let index = registers[r_idx] as usize + d_idx - 1;
+                    data[index+0] = (registers[register_idx]>>24) as u8;
+                    data[index+1] = (registers[register_idx]>>16) as u8;
+                    data[index+2] = (registers[register_idx]>> 8) as u8;
+                    data[index+3] = (registers[register_idx]    ) as u8;
                 }
-                stack[stack_idx-3] = (registers[register_idx]>>24) as u8;
-                stack[stack_idx-2] = (registers[register_idx]>>16) as u8;
-                stack[stack_idx-1] = (registers[register_idx]>> 8) as u8;
-                stack[stack_idx-0] = (registers[register_idx]    ) as u8;
             },
 
             // Transfer
@@ -269,6 +245,9 @@ pub fn parse(mut tokens: Tokens) {
         tokens.consume();
         tokens.expect_eol().unwrap();
 
+        if std::env::var("DATA_TRACE").is_ok() {
+            display_data_per_4byte(&data);
+        }
         if std::env::var("STACK_TRACE").is_ok() {
             display_stack(&stack);
         }
@@ -277,13 +256,13 @@ pub fn parse(mut tokens: Tokens) {
         }
     }
 
-    println!("\ndata: {:?}", data);
+    display_data_per_4byte(&data);
     display_register(&registers);
 }
 
 // Display all registers
 fn display_register(registers: &[i32]) {
-    println!("\n================================================================");
+    println!("\n--------------------------[ REGISTER ]--------------------------");
     for i in 0..8 {
         for j in 0..4 {
             if registers[i+j*8] == 0 {
@@ -295,7 +274,30 @@ fn display_register(registers: &[i32]) {
         }
         println!();
     }
-    println!("================================================================");
+    println!("----------------------------------------------------------------");
+}
+
+fn display_data_per_4byte(data: &Vec<u8>) {
+    println!("\n----------------------------[ DATA ]----------------------------");
+    for i in 0..=data.len()/16 {
+        print!(" 0x{:08x}:   ", i*16);
+        for j in 0..4 {
+            let mut int = 0;
+            for k in 0..4 {
+                if i*16+j*4+k < data.len() {
+                    int |= (data[i*16+j*4+k] as i32) << (4-1-k)*8;
+                }
+            }
+            if int == 0 {
+                print!("  0x{:08x}", int);
+            } else {
+                print!("  \x1b[31m0x{:08x}\x1b[m", int);
+            }
+            std::io::stdout().flush().unwrap();
+        }
+        println!();
+    }
+    println!("----------------------------------------------------------------");
 }
 
 fn display_stack(stack: &Vec<u8>) {
@@ -453,6 +455,55 @@ fn eval_jump(registers: &mut [i32], tokens: &mut Tokens, kind: InstructionKind) 
     false
 }
 
+fn eval_load(registers: &mut [i32], tokens: &mut Tokens, data: &Vec<u8>, stack: &mut Vec<u8>, byte: usize) {
+    tokens.consume().unwrap();
+    let register_idx = tokens.expect_register().unwrap();
+    tokens.consume().unwrap();
+    if let Ok((r_idx, s_idx)) = tokens.expect_stack() { // data or stack
+        let idx = registers[r_idx] + s_idx;
+
+        let is_data_idx = if idx < 0 {
+            false
+        } else if 0 < idx {
+            true
+        } else {
+            panic!("TODO");
+        };
+
+        // data index
+        if is_data_idx {
+            let idx = registers[r_idx] as isize;
+            registers[register_idx] = get_int(&data, &stack, idx, byte);
+
+        // stack index
+        } else {
+            let stack_idx = (-idx) as usize;
+            if stack.len() <= stack_idx {
+                stack.resize(stack_idx+1, 0);
+            }
+            registers[register_idx] = {
+                let mut int = 0;
+                for i in 0..byte {
+                    int |= (stack[stack_idx-(byte-1-i)] as i32) << (byte-1-i)*8;
+                }
+                int
+            };
+        }
+    } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
+        registers[register_idx] = {
+            let mut int = 0;
+            let index = d_idx - 1 + registers[r_idx] as usize;
+            for i in 0..byte {
+                int |= (data[index+i] as i32) << (byte-1-i)*8;
+            }
+            int
+        };
+    } else {
+        let idx = tokens.expect_address().unwrap() as isize;
+        registers[register_idx] = get_int(&data, &stack, idx, byte);
+    }
+}
+
 #[test]
 #[cfg(test)]
 fn test_parse() {
@@ -541,39 +592,28 @@ fn test_parse() {
 /// argument1: data:&Vec<u8>
 /// argument2: stack:&Vec<u8>
 /// argument3: index: isize  =>  stack(-) | data(+)
-pub fn get_int(data: &Vec<u8>, stack: &Vec<u8>, index: isize) -> i32 {
+/// argument4: byte
+pub fn get_int(data: &Vec<u8>, stack: &Vec<u8>, index: isize, byte: usize) -> i32 {
 
     // stack
     if index < 0 {
         let index = (-index - 1) as usize;
-        let octet1 = stack[index+0] as i32;
-        let octet2 = stack[index+1] as i32;
-        let octet3 = stack[index+2] as i32;
-        let octet4 = stack[index+3] as i32;
-
-        // Big Endian
         let mut int: i32 = 0;
-        int |= octet1 << 24;
-        int |= octet2 << 16;
-        int |= octet3 <<  8;
-        int |= octet4;
+        // Big Endian
+        for i in 0..byte {
+            int |= (stack[index+i] as i32) << (byte-1-i)*8;
+        }
 
         int
 
     // data
     } else if 0 < index {
         let index = ( index - 1) as usize;
-        let octet1 = data[index+0] as i32;
-        let octet2 = data[index+1] as i32;
-        let octet3 = data[index+2] as i32;
-        let octet4 = data[index+3] as i32;
-
-        // Big Endian
         let mut int: i32 = 0;
-        int |= octet1 << 24;
-        int |= octet2 << 16;
-        int |= octet3 <<  8;
-        int |= octet4;
+        // Big Endian
+        for i in 0..byte {
+            int |= (data[index+i] as i32) << (byte-1-i)*8;
+        }
 
         int
 
@@ -614,9 +654,9 @@ pub fn get_string(data: &Vec<u8>, stack: &Vec<u8>, index: i32) -> String {
 fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
 
     // Check all tokens
-    while tokens.consume().is_some() {
+    'outer: while tokens.consume().is_some() {
 
-        // Ignore .text segment
+        // Ignore except .data segment
         if TokenKind::INDICATE(IndicateKind::data) == *tokens.kind() {
 
             // consume EOL
@@ -629,6 +669,19 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                     break;
                 }
 
+                // Align 2^n
+                if let TokenKind::INDICATE(IndicateKind::align(n)) = *tokens.kind() {
+                    let padding = 2i32.pow(n as u32) as usize;
+                    let i = data.len() % padding;
+                    for _ in 0..i {
+                        data.push(0);
+                    }
+                    // consume EOL
+                    tokens.consume().unwrap();
+                    tokens.expect_eol().unwrap();
+                    continue;
+                }
+
                 // TokenKind::LABEL(usize) = data.len() + 1
                 if let TokenKind::LABEL(_, _, ref mut index) = &mut tokens.kind() {
                     *index = Some(data.len() + 1);
@@ -636,19 +689,32 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                     break;
                 }
 
-                // until EOL
+                // until Label or .text
                 while tokens.consume().is_some() {
-                    if TokenKind::EOL == *tokens.kind() {
+                    if let TokenKind::LABEL(_, _, _) = *tokens.kind() {
                         break;
                     }
+                    if TokenKind::INDICATE(IndicateKind::text) == *tokens.kind() {
+                        break;
+                    }
+
+                    // ignore EOL
+                    loop {
+                        if let Some(token) = tokens.consume() {
+                            if token.kind == TokenKind::EOL {
+                                continue;
+                            } else {
+                                break;
+                            }
+                        } else {
+                            break 'outer;
+                        }
+                    }
+
 
                     match tokens.kind() {
                         // Big Endian
                         TokenKind::INDICATE(IndicateKind::word(w)) => {
-                            //data.push(((*w>>24) & (std::u32::MAX - 255)) as u8);
-                            //data.push(((*w>>16) & (std::u32::MAX - 255)) as u8);
-                            //data.push(((*w>> 8) & (std::u32::MAX - 255)) as u8);
-                            //data.push(( *w      & (std::u32::MAX - 255)) as u8);
                             data.push((*w>>24) as u8);
                             data.push((*w>>16) as u8);
                             data.push((*w>> 8) as u8);
@@ -673,14 +739,15 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                             }
                             data.push(0);
                         },
-                        TokenKind::INDICATE(IndicateKind::align(n)) => {
-                            // TODO
-                            // Align 2^n
-                            //data.len() % 
-                        },
                         _ => (),
                     }
                 }
+            }
+        } else if let TokenKind::INDICATE(IndicateKind::align(n)) = *tokens.kind() {
+            let padding = 2i32.pow(n as u32) as usize;
+            let i = data.len() % padding;
+            for _ in 0..i {
+                data.push(0);
             }
         }
     }

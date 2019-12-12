@@ -61,7 +61,9 @@ pub enum InstructionKind {
 
     /// Load, Store
     LA,       // Rd, address   | Rt = idx(stack)
-    LW,       // Rt, address   | Rt = stack[idx]
+    LB,       // Rt, address   | Rt = stack[idx] (8bit)
+    LH,       // Rt, address   | Rt = stack[idx] (16bit)
+    LW,       // Rt, address   | Rt = stack[idx] (32bit)
     SW,       // Rt, address   | stack[idx] = Rt
 
     /// Transfer
@@ -77,7 +79,7 @@ pub enum InstructionKind {
 pub enum IndicateKind {
     text,            // Text space start
     data,            // Data space start
-    globl,           // Ignore
+    globl(String),   // TODO
     word(u32),       // Number(32-bit)
     byte(u8),        // 1 char(8-bit)
     space(u32),      // n byte
@@ -105,11 +107,12 @@ pub enum RegisterKind {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
-    INSTRUCTION(InstructionKind),
-    INDICATE(IndicateKind),               // Pseudo instruction
+    INSTRUCTION(InstructionKind),         // Instruction
+    INDICATE(IndicateKind),               // Indication
     INTEGER(i32),                         // Immediate
     REGISTER(RegisterKind, usize),        // (_, Index)
     STACK(RegisterKind, usize, i32),      // (_, Append index)
+    DATA(RegisterKind, usize, String),    // (_, Label name)
     LABEL(String, usize, Option<usize>),  // (Literal, Token index, Data index)
     ADDRESS(String),                      // Literal
     INVALID(String),                      // Invalid string
@@ -262,6 +265,24 @@ impl Tokens {
         } else {
             let t = self.token[self.idx].clone();
             Err(format!("{}: expect TokenKind::STACK(RegisterKind, usize, usize). but got: {:?}", t.line, t.kind))
+        }
+    }
+
+    /// Return: Ok((register_idx, data index))
+    pub fn expect_data(&self) -> Result<(usize, usize), String> {
+        if let TokenKind::DATA(_, r_i, s) = self.token[self.idx].clone().kind {
+            for t in &self.token {
+                if let TokenKind::LABEL(name, _, Some(d_i)) = &t.kind {
+                    if *s == *name {
+                        return Ok((r_i, *d_i));
+                    }
+                }
+            }
+            let t = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::DATA(RegisterKind, usize, String). but got: {:?}", t.line, t.kind))
+        } else {
+            let t = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::DATA(RegisterKind, usize, String). but got: {:?}", t.line, t.kind))
         }
     }
 

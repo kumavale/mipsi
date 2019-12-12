@@ -75,6 +75,39 @@ fn is_stack(word: &str) -> Result<(RegisterKind, usize, i32), String> {
     Err(errmsg)
 }
 
+/// [a-zA-Z_][a-zA-Z_0-9]* \( `is_register` \)
+fn is_data(word: &str) -> Result<(RegisterKind, usize, String), String> {
+    let errmsg = format!("is_stack(): not stack identifier: {}", word);
+    if Some(')') != word.chars().nth(word.len()-1) {
+        return  Err(errmsg);
+    }
+    let mut s = word.to_string();
+    s.remove(s.len()-1);  // Delete ')'
+    let mut s_chars = s.chars();
+
+    if let Some(c) = s_chars.next() {
+        if 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || c == '_' {
+            let mut label = c.to_string();
+
+            while let Some(c) = s_chars.next() {
+                if 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || c == '_' || '0' <= c && c <= '9' {
+                    label = format!("{}{}", label, c);
+                } else if c == '(' {
+                    let mut reg = String::new();
+                    while let Some(c) = s_chars.next() {
+                        reg = format!("{}{}", reg, c);
+                    }
+                    let (reg, idx) = is_register(&reg)?;
+                    return Ok((reg, idx, label));
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+    Err(errmsg)
+}
+
 fn is_label(word: &str) -> bool {
     word.ends_with(':')
 }
@@ -194,6 +227,8 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
             tokens.push(TokenKind::REGISTER(k, i), number_of_lines);
         } else if let Ok((k, i, a)) = is_stack(&word) {
             tokens.push(TokenKind::STACK(k, i, a), number_of_lines);
+        } else if let Ok((k, i, s)) = is_data(&word) {
+            tokens.push(TokenKind::DATA(k, i, s), number_of_lines);
         } else if is_comment(&word) {
             break;
         } else {
@@ -266,6 +301,8 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "JALR"    => TokenKind::INSTRUCTION(InstructionKind::JALR),
                 // Load, Store
                 "LA"      => TokenKind::INSTRUCTION(InstructionKind::LA),
+                "LB"      => TokenKind::INSTRUCTION(InstructionKind::LB),
+                "LH"      => TokenKind::INSTRUCTION(InstructionKind::LH),
                 "LW"      => TokenKind::INSTRUCTION(InstructionKind::LW),
                 "SW"      => TokenKind::INSTRUCTION(InstructionKind::SW),
                 // Transfer
@@ -284,7 +321,10 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                             // unwrap() => TokenKind::INVALID()
                             ".text" =>  TokenKind::INDICATE(IndicateKind::text),
                             ".data" =>  TokenKind::INDICATE(IndicateKind::data),
-                            ".globl" => TokenKind::INDICATE(IndicateKind::globl),
+                            ".globl" => {
+                                let label = words.next().unwrap().to_string();
+                                TokenKind::INDICATE(IndicateKind::globl(label))
+                            },
                             ".word" => {
                                 // TODO
                                 // 0:5 => Allocate 20 consecutive bytes for 5-element integer word array
@@ -312,7 +352,6 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                                 break;
                             },
                             ".space" => {
-                                // TODO
                                 let length = words.next().unwrap().parse::<u32>().unwrap();
                                 TokenKind::INDICATE(IndicateKind::space(length))
                             },
