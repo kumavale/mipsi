@@ -2,8 +2,11 @@
 pub enum InstructionKind {
     /// Arithmetic, Logic
     ADD,      // Rd, Rs, Rt    | Rd = Rs + Rt
+    ADDU,     // Rd, Rs, Rt    | Rd = Rs + Rt
     ADDI,     // Rt, Rs, Imm   | Rt = Rs + Imm
+    ADDIU,    // Rt, Rs, Imm   | Rt = Rs + Imm
     SUB,      // Rd, Rs, Rt    | Rd = Rs - Rt
+    SUBU,     // Rd, Rs, Rt    | Rd = Rs - Rt
     MUL,      // Rd, Rs, Rt    | Rd = Rs * Rt
     DIV,      // Rd, Rs, Rt    | Rd = Rs / Rt
     REM,      // Rd, Rs, Rt    | Rd = Rs % Rt

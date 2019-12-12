@@ -237,12 +237,12 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
         } else {
             let token_kind = match &*word.to_ascii_uppercase() {
                 // Arithmetic, Logic
-                "ADD" |
-                "ADDU"    => TokenKind::INSTRUCTION(InstructionKind::ADD),
-                "ADDI" |
-                "ADDIU"   => TokenKind::INSTRUCTION(InstructionKind::ADDI),
-                "SUB" |
-                "SUBU"    => TokenKind::INSTRUCTION(InstructionKind::SUB),
+                "ADD"     => TokenKind::INSTRUCTION(InstructionKind::ADD),
+                "ADDU"    => TokenKind::INSTRUCTION(InstructionKind::ADDU),
+                "ADDI"    => TokenKind::INSTRUCTION(InstructionKind::ADDI),
+                "ADDIU"   => TokenKind::INSTRUCTION(InstructionKind::ADDIU),
+                "SUB"     => TokenKind::INSTRUCTION(InstructionKind::SUB),
+                "SUBU"    => TokenKind::INSTRUCTION(InstructionKind::SUBU),
                 "MUL"     => TokenKind::INSTRUCTION(InstructionKind::MUL),
                 "DIV"     => TokenKind::INSTRUCTION(InstructionKind::DIV),
                 "REM"     => TokenKind::INSTRUCTION(InstructionKind::REM),
@@ -510,11 +510,11 @@ main: ## Start of code section
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::NOP));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADD));
-    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADD));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADDU));
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADDI));
-    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADDI));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ADDIU));
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SUB));
-    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SUB));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SUBU));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::AND));
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ANDI));

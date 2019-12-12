@@ -2,6 +2,11 @@ use std::io::Write;
 
 use super::token::*;
 
+mod display;
+use crate::parser::display::*;
+mod eval;
+use crate::parser::eval::*;
+
 
 #[allow(clippy::cognitive_complexity)]
 pub fn parse(mut tokens: Tokens) {
@@ -33,11 +38,16 @@ pub fn parse(mut tokens: Tokens) {
 
         match instruction_kind {
             // Arithmetic, Logic
-            InstructionKind::ADD  |
+            InstructionKind::ADD |
             InstructionKind::ADDI =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y),
+            InstructionKind::ADDU |
+            InstructionKind::ADDIU =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 + y as u32) as i32),
             InstructionKind::SUB =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y),
+            InstructionKind::SUBU =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 - y as u32) as i32),
             InstructionKind::MUL =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y),
             InstructionKind::DIV =>
@@ -255,251 +265,8 @@ pub fn parse(mut tokens: Tokens) {
     }
 
     display_data_per_4byte(&data);
+    display_stack(&stack);
     display_register(&registers);
-}
-
-// Display all registers
-fn display_register(registers: &[i32]) {
-    println!("\n--------------------------[ REGISTER ]--------------------------");
-    for i in 0..8 {
-        for j in 0..4 {
-            if registers[i+j*8] == 0 {
-                print!(" ${:<2}:0x{:08x}\t", i+j*8, registers[i+j*8]);
-            } else {
-                print!(" ${:<2}:\x1b[31m0x{:08x}\x1b[m\t", i+j*8, registers[i+j*8]);
-            }
-            std::io::stdout().flush().unwrap();
-        }
-        println!();
-    }
-    println!("----------------------------------------------------------------");
-}
-
-fn display_data_per_4byte(data: &[u8]) {
-    println!("\n----------------------------[ DATA ]----------------------------");
-    for i in 0..=data.len()/16 {
-        print!(" 0x{:08x}:   ", i*16);
-        for j in 0..4 {
-            let mut int = 0;
-            for k in 0..4 {
-                if i*16+j*4+k < data.len() {
-                    int |= (data[i*16+j*4+k] as i32) << ((4-1-k) * 8);
-                }
-            }
-            if int == 0 {
-                print!("  0x{:08x}", int);
-            } else {
-                print!("  \x1b[31m0x{:08x}\x1b[m", int);
-            }
-            std::io::stdout().flush().unwrap();
-        }
-        println!();
-    }
-    println!("----------------------------------------------------------------");
-}
-
-fn display_stack(stack: &[u8]) {
-    println!("stack: {:?}", stack);
-}
-
-fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
-where
-    F: Fn(i32, i32) -> i32,
-{
-    tokens.consume().unwrap();
-    if let Ok(rd_idx) = tokens.expect_register() {
-        registers[rd_idx] = {
-            let mut r1 = 0;
-            tokens.consume().unwrap();
-            if let Ok(register_idx) = tokens.expect_register() {
-                r1 = registers[register_idx];
-            } else if let Ok(num) = tokens.expect_integer() {
-                r1 = num;
-            }
-
-            let mut r2 = 0;
-            if tokens.consume().is_some() {
-                if let Ok(register_idx) = tokens.expect_register() {
-                    r2 = registers[register_idx];
-                } else if let Ok(num) = tokens.expect_integer() {
-                    r2 = num;
-                }
-            } else {
-                // NOT
-            }
-            fun(r1, r2)
-        };
-    }
-}
-
-fn eval_constant<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
-where
-    F: Fn(i32) -> i32,
-{
-    tokens.consume().unwrap();
-    let register_idx = tokens.expect_register().unwrap();
-    registers[register_idx] = {
-        tokens.consume().unwrap();
-        let integer = tokens.expect_integer().unwrap();
-        fun(integer)
-    };
-}
-
-fn eval_comparison<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
-where
-    F: Fn(i32, i32) -> bool,
-{
-    tokens.consume().unwrap();
-    if let Ok(rd_idx) = tokens.expect_register() {
-        tokens.consume().unwrap();
-        if let Ok(rs_idx) = tokens.expect_register() {
-            tokens.consume().unwrap();
-            if let Ok(rt_idx) = tokens.expect_register() {
-                registers[rd_idx] = if fun(registers[rs_idx], registers[rt_idx]) {
-                    1
-                } else {
-                    0
-                }
-            } else {
-                let num = tokens.expect_integer().unwrap();
-                registers[rd_idx] = if fun(registers[rs_idx], num) {
-                    1
-                } else {
-                    0
-                }
-            }
-        }
-    }
-}
-
-fn eval_branch<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F) -> bool
-where
-    F: Fn(i32, i32) -> bool,
-{
-    tokens.consume().unwrap();
-    if let Ok(rsrc1_idx) = tokens.expect_register() {
-        tokens.consume().unwrap();
-        if let Ok(rsrc2_idx) = tokens.expect_register() {
-            tokens.consume().unwrap();
-            if fun(registers[rsrc1_idx], registers[rsrc2_idx]) {
-                let idx = tokens.expect_label().unwrap();
-                tokens.goto(idx-1);
-                return true;
-            }
-        } else if let Ok(num) = tokens.expect_integer() {
-            tokens.consume().unwrap();
-            if fun(registers[rsrc1_idx], num) {
-                let idx = tokens.expect_label().unwrap();
-                tokens.goto(idx-1);
-                return true;
-            }
-        } else {
-            // BEQZ, BGEZ, BGTZ, BLEZ, BLTZ, BNEZ
-            let idx = tokens.expect_label().unwrap();
-            if fun(registers[rsrc1_idx], 0) {
-                tokens.goto(idx-1);
-                return true;
-            }
-        }
-    } else {
-        // B // TODO
-        let idx = tokens.expect_label().unwrap();
-        tokens.goto(idx-1);
-        return true;
-    }
-
-    false
-}
-
-/// Return: can continue
-fn eval_jump(registers: &mut [i32], tokens: &mut Tokens, kind: InstructionKind) -> bool {
-    match kind {
-        InstructionKind::J => {
-            tokens.consume().unwrap();
-            if let Ok(idx) = tokens.expect_label() {
-                tokens.goto(idx-1);
-                return true;
-            }
-        },
-        InstructionKind::JAL => {
-            tokens.consume().unwrap();
-            if let Ok(idx) = tokens.expect_label() {
-                registers[31] = tokens.idx() as i32 + 1;  // $ra
-                tokens.goto(idx-1);
-                return true;
-            }
-        },
-        InstructionKind::JR => {
-            tokens.consume().unwrap();
-            if let Ok(idx) = tokens.expect_register() {
-                tokens.goto(registers[idx] as usize);
-                return true;
-            }
-        },
-        InstructionKind::JALR => {
-            tokens.consume().unwrap();
-            if let Ok(rs_idx) = tokens.expect_register() {
-                tokens.consume();
-                if let Ok(rd_idx) = tokens.expect_register() {
-                    registers[rd_idx] = tokens.idx() as i32 + 1;
-                    tokens.goto(rs_idx-1);
-                    return true;
-                }
-            }
-        },
-        _ => panic!("eval_jump(): invalid InstructionKind: {:?}", kind),
-    }
-
-    false
-}
-
-fn eval_load(registers: &mut [i32], tokens: &mut Tokens, data: &[u8], stack: &mut Vec<u8>, byte: usize) {
-    tokens.consume().unwrap();
-    let register_idx = tokens.expect_register().unwrap();
-    tokens.consume().unwrap();
-    if let Ok((r_idx, s_idx)) = tokens.expect_stack() { // data or stack
-        let idx = registers[r_idx] + s_idx;
-
-        let is_data_idx = if idx < 0 {
-            false
-        } else if 0 < idx {
-            true
-        } else {
-            panic!("eval_load(): invalid index: 0");
-        };
-
-        // data index
-        if is_data_idx {
-            let idx = registers[r_idx] as isize;
-            registers[register_idx] = get_int(&data, &stack, idx, byte);
-
-        // stack index
-        } else {
-            let stack_idx = (-idx) as usize;
-            if stack.len() <= stack_idx {
-                stack.resize(stack_idx+1, 0);
-            }
-            registers[register_idx] = {
-                let mut int = 0;
-                for i in 0..byte {
-                    int |= (stack[stack_idx-(byte-1-i)] as i32) << ((byte-1-i) * 8);
-                }
-                int
-            };
-        }
-    } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-        registers[register_idx] = {
-            let mut int = 0;
-            let index = d_idx - 1 + registers[r_idx] as usize;
-            for i in 0..byte {
-                int |= (data[index+i] as i32) << ((byte-1-i) * 8);
-            }
-            int
-        };
-    } else {
-        let idx = tokens.expect_address().unwrap() as isize;
-        registers[register_idx] = get_int(&data, &stack, idx, byte);
-    }
 }
 
 /// Return signed integer (32-bit)
@@ -510,7 +277,6 @@ fn eval_load(registers: &mut [i32], tokens: &mut Tokens, data: &[u8], stack: &mu
 /// let int: i32 = get_int(&data, &stack, registers[4]);
 /// ```
 ///
-//// argument1: memory: &<T>  =>  registers:&[i32] | stack:&Vec<u8> | data:&Vec<u8>
 /// argument1: data:&[u8]
 /// argument2: stack:&[u8]
 /// argument3: index: isize  =>  stack(-) | data(+)
