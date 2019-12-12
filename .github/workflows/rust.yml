@@ -1,4 +1,4 @@
-name: Rust
+name: Build
 
 on: [push]
 
@@ -9,8 +9,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    - name: prepare
+      run: rustup add component clippy
+
+    - name: clippy
+      run: cargo clippy --all-targets --all-features -- -W clippy::dbg_macro
+
     - name: Build
-      run: cargo build --verbose
-  
+      run: cargo build --verbose --all-targets
+
     - name: Run tests
       run: cargo test --verbose
