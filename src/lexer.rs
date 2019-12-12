@@ -63,6 +63,7 @@ fn is_stack(word: &str) -> Result<(RegisterKind, usize, i32), String> {
             add = add * 10 + num;
         } else if c == '(' {
             let mut reg = String::new();
+            #[allow(clippy::while_let_on_iterator)]
             while let Some(c) = s_chars.next() {
                 reg = format!("{}{}", reg, c);
             }
@@ -94,6 +95,7 @@ fn is_data(word: &str) -> Result<(RegisterKind, usize, String), String> {
                     label = format!("{}{}", label, c);
                 } else if c == '(' {
                     let mut reg = String::new();
+                    #[allow(clippy::while_let_on_iterator)]
                     while let Some(c) = s_chars.next() {
                         reg = format!("{}{}", reg, c);
                     }
@@ -192,6 +194,7 @@ fn split_words(line: &str) -> Vec<String> {
         // word except string
         } else {
             let mut word = format!("{}", ch);
+            #[allow(clippy::while_let_on_iterator)]
             while let Some(ch2) = line_iter.next() {
                 match ch2 {
                     ' ' | ',' | '\n' | '\r' | '\t' => { break; },
@@ -383,6 +386,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
 
 #[test]
 #[cfg(test)]
+#[allow(clippy::cognitive_complexity)]
 fn test_tokenize() {
     use std::io::{BufRead, BufReader, Write};
 

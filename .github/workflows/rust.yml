@@ -12,11 +12,19 @@ jobs:
     - name: prepare
       run: rustup component add clippy
 
-    - name: clippy
-      run: cargo clippy --all-targets --all-features -- -W clippy::dbg_macro
-
     - name: Build
       run: cargo build --verbose --all-targets
 
     - name: Run tests
       run: cargo test --verbose
+
+    - name: clippy
+      run: |
+          cargo clippy --all-targets --all-features -- -W clippy::dbg_macro
+          cargo clippy -- -W clippy::dbg_macro -D warnings
+
+    - name: Run all example
+      run: |
+          chmod +x ./example/test.sh
+          ./example/test.sh
+

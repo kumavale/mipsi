@@ -3,18 +3,17 @@ use std::io::Write;
 use super::token::*;
 
 
+#[allow(clippy::cognitive_complexity)]
 pub fn parse(mut tokens: Tokens) {
 
     let mut registers: [i32; 32] = [0; 32];
-    let mut addresses: [Option<i32>; 32] = [None; 32];  // TODO delete
-
     // let **registers = { &zero, &at, ...};
 
     let mut data:  Vec<u8> = Vec::new();
     let mut stack: Vec<u8> = vec![0];
 
     data_analysis(&mut tokens, &mut data);
-    println!("data: {:?}", data);
+    //println!("data: {:?}", data);
 
     #[allow(unused)]
     while let Some(token) = tokens.consume() {
@@ -75,7 +74,7 @@ pub fn parse(mut tokens: Tokens) {
             InstructionKind::LI =>
                 eval_constant(&mut registers, &mut tokens, |x| x),
             InstructionKind::LUI =>
-                eval_constant(&mut registers, &mut tokens, |x| x & (std::i32::MAX - 65535)), // TODO u32?
+                eval_constant(&mut registers, &mut tokens, |x| x & (std::u32::MAX-65535) as i32),
 
             // Comparison
             InstructionKind::SLT |
@@ -137,7 +136,6 @@ pub fn parse(mut tokens: Tokens) {
                 tokens.consume().unwrap();
                 let label_idx = tokens.expect_address().unwrap() as i32;
                 registers[register_idx] = label_idx;
-                addresses[register_idx] = Some(label_idx);
             },
             InstructionKind::LB =>  // Rt = *((int*)address) (8bit)
                 eval_load(&mut registers, &mut tokens, &data, &mut stack, 1),
@@ -159,11 +157,11 @@ pub fn parse(mut tokens: Tokens) {
                     stack[stack_idx-3] = (registers[register_idx]>>24) as u8;
                     stack[stack_idx-2] = (registers[register_idx]>>16) as u8;
                     stack[stack_idx-1] = (registers[register_idx]>> 8) as u8;
-                    stack[stack_idx-0] = (registers[register_idx]    ) as u8;
+                    stack[stack_idx]   = (registers[register_idx]    ) as u8;
                 } else {
                     let (r_idx, d_idx) = tokens.expect_data().unwrap();
                     let index = registers[r_idx] as usize + d_idx - 1;
-                    data[index+0] = (registers[register_idx]>>24) as u8;
+                    data[index]   = (registers[register_idx]>>24) as u8;
                     data[index+1] = (registers[register_idx]>>16) as u8;
                     data[index+2] = (registers[register_idx]>> 8) as u8;
                     data[index+3] = (registers[register_idx]    ) as u8;
@@ -194,7 +192,7 @@ pub fn parse(mut tokens: Tokens) {
                         print!("{}", registers[4]);  // $a0
                         std::io::stdout().flush().unwrap();
                     },
-                    // print_string: $a0=string(label)
+                    // print_string: $a0=string(data index)
                     4  => {
                         print!("{}", get_string(&data, &stack, registers[4]));  // $a0
                         std::io::stdout().flush().unwrap();
@@ -277,7 +275,7 @@ fn display_register(registers: &[i32]) {
     println!("----------------------------------------------------------------");
 }
 
-fn display_data_per_4byte(data: &Vec<u8>) {
+fn display_data_per_4byte(data: &[u8]) {
     println!("\n----------------------------[ DATA ]----------------------------");
     for i in 0..=data.len()/16 {
         print!(" 0x{:08x}:   ", i*16);
@@ -285,7 +283,7 @@ fn display_data_per_4byte(data: &Vec<u8>) {
             let mut int = 0;
             for k in 0..4 {
                 if i*16+j*4+k < data.len() {
-                    int |= (data[i*16+j*4+k] as i32) << (4-1-k)*8;
+                    int |= (data[i*16+j*4+k] as i32) << ((4-1-k) * 8);
                 }
             }
             if int == 0 {
@@ -300,7 +298,7 @@ fn display_data_per_4byte(data: &Vec<u8>) {
     println!("----------------------------------------------------------------");
 }
 
-fn display_stack(stack: &Vec<u8>) {
+fn display_stack(stack: &[u8]) {
     println!("stack: {:?}", stack);
 }
 
@@ -455,7 +453,7 @@ fn eval_jump(registers: &mut [i32], tokens: &mut Tokens, kind: InstructionKind) 
     false
 }
 
-fn eval_load(registers: &mut [i32], tokens: &mut Tokens, data: &Vec<u8>, stack: &mut Vec<u8>, byte: usize) {
+fn eval_load(registers: &mut [i32], tokens: &mut Tokens, data: &[u8], stack: &mut Vec<u8>, byte: usize) {
     tokens.consume().unwrap();
     let register_idx = tokens.expect_register().unwrap();
     tokens.consume().unwrap();
@@ -467,7 +465,7 @@ fn eval_load(registers: &mut [i32], tokens: &mut Tokens, data: &Vec<u8>, stack: 
         } else if 0 < idx {
             true
         } else {
-            panic!("TODO");
+            panic!("eval_load(): invalid index: 0");
         };
 
         // data index
@@ -484,7 +482,7 @@ fn eval_load(registers: &mut [i32], tokens: &mut Tokens, data: &Vec<u8>, stack: 
             registers[register_idx] = {
                 let mut int = 0;
                 for i in 0..byte {
-                    int |= (stack[stack_idx-(byte-1-i)] as i32) << (byte-1-i)*8;
+                    int |= (stack[stack_idx-(byte-1-i)] as i32) << ((byte-1-i) * 8);
                 }
                 int
             };
@@ -494,7 +492,7 @@ fn eval_load(registers: &mut [i32], tokens: &mut Tokens, data: &Vec<u8>, stack: 
             let mut int = 0;
             let index = d_idx - 1 + registers[r_idx] as usize;
             for i in 0..byte {
-                int |= (data[index+i] as i32) << (byte-1-i)*8;
+                int |= (data[index+i] as i32) << ((byte-1-i) * 8);
             }
             int
         };
@@ -502,78 +500,6 @@ fn eval_load(registers: &mut [i32], tokens: &mut Tokens, data: &Vec<u8>, stack: 
         let idx = tokens.expect_address().unwrap() as isize;
         registers[register_idx] = get_int(&data, &stack, idx, byte);
     }
-}
-
-#[test]
-#[cfg(test)]
-fn test_parse() {
-
-    let mut tokens: Tokens = Tokens::new();
-
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI), 1);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 2);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 3);
-    tokens.push(TokenKind::INTEGER(1), 4);
-    tokens.push(TokenKind::EOL, 5);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADD), 6);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t1,  9), 7);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t2, 10), 8);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t3, 11), 9);
-    tokens.push(TokenKind::EOL, 10);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SUB), 11);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t4, 12), 12);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t5, 13), 13);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t6, 14), 14);
-    tokens.push(TokenKind::EOL, 15);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::XOR), 16);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 17);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 18);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 19);
-    tokens.push(TokenKind::EOL, 20);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::LI), 21);
-    tokens.push(TokenKind::REGISTER(RegisterKind::v0, 2), 22);
-    tokens.push(TokenKind::INTEGER(1), 23);
-    tokens.push(TokenKind::EOL, 24);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::MOVE), 25);
-    tokens.push(TokenKind::REGISTER(RegisterKind::a0,  4), 26);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t2, 10), 27);
-    tokens.push(TokenKind::EOL, 28);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), 29);
-    tokens.push(TokenKind::EOL, 30);
-    tokens.push(TokenKind::LABEL("loop".to_string(), 30, None), 31);
-    tokens.push(TokenKind::EOL, 32);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI), 33);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 34);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 35);
-    tokens.push(TokenKind::INTEGER(1), 36);
-    tokens.push(TokenKind::EOL, 37);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLT), 38);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 39);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 40);
-    tokens.push(TokenKind::ADDRESS("loop".to_string()), 41);
-    tokens.push(TokenKind::EOL, 42);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::MUL), 43);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t4, 12), 44);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t5, 13), 45);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t6, 14), 46);
-    tokens.push(TokenKind::EOL, 47);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::J), 48);
-    tokens.push(TokenKind::ADDRESS("hoge".to_string()), 49);
-    tokens.push(TokenKind::EOL, 50);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::JAL), 51);
-    tokens.push(TokenKind::ADDRESS("fuga".to_string()), 52);
-    tokens.push(TokenKind::EOL, 53);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SLT), 54);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t0,  8), 55);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t7, 15), 56);
-    tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 57);
-    tokens.push(TokenKind::EOL, 58);
-    tokens.push(TokenKind::INSTRUCTION(InstructionKind::NOT), 59);
-    tokens.push(TokenKind::REGISTER(RegisterKind::t7, 15), 60);
-    tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 61);
-    tokens.push(TokenKind::EOL, 62);
-
-    parse(tokens);
 }
 
 /// Return signed integer (32-bit)
@@ -585,11 +511,11 @@ fn test_parse() {
 /// ```
 ///
 //// argument1: memory: &<T>  =>  registers:&[i32] | stack:&Vec<u8> | data:&Vec<u8>
-/// argument1: data:&Vec<u8>
-/// argument2: stack:&Vec<u8>
+/// argument1: data:&[u8]
+/// argument2: stack:&[u8]
 /// argument3: index: isize  =>  stack(-) | data(+)
 /// argument4: byte
-pub fn get_int(data: &Vec<u8>, stack: &Vec<u8>, index: isize, byte: usize) -> i32 {
+pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize) -> i32 {
 
     // stack
     if index < 0 {
@@ -597,7 +523,7 @@ pub fn get_int(data: &Vec<u8>, stack: &Vec<u8>, index: isize, byte: usize) -> i3
         let mut int: i32 = 0;
         // Big Endian
         for i in 0..byte {
-            int |= (stack[index+i] as i32) << (byte-1-i)*8;
+            int |= (stack[index+i] as i32) << ((byte-1-i) * 8);
         }
 
         int
@@ -608,7 +534,7 @@ pub fn get_int(data: &Vec<u8>, stack: &Vec<u8>, index: isize, byte: usize) -> i3
         let mut int: i32 = 0;
         // Big Endian
         for i in 0..byte {
-            int |= (data[index+i] as i32) << (byte-1-i)*8;
+            int |= (data[index+i] as i32) << ((byte-1-i) * 8);
         }
 
         int
@@ -618,7 +544,7 @@ pub fn get_int(data: &Vec<u8>, stack: &Vec<u8>, index: isize, byte: usize) -> i3
     }
 }
 
-pub fn get_string(data: &Vec<u8>, stack: &Vec<u8>, index: i32) -> String {
+pub fn get_string(data: &[u8], stack: &[u8], index: i32) -> String {
     // stack
     if index < 0 {
         let mut i = (-index - 1) as usize;
@@ -744,5 +670,77 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
 
     data.push(0);
     tokens.reset();
+}
+
+#[test]
+#[cfg(test)]
+fn test_parse() {
+
+    let mut tokens: Tokens = Tokens::new();
+
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI), 1);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 2);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 3);
+    tokens.push(TokenKind::INTEGER(1), 4);
+    tokens.push(TokenKind::EOL, 5);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADD), 6);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t1,  9), 7);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t2, 10), 8);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t3, 11), 9);
+    tokens.push(TokenKind::EOL, 10);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SUB), 11);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t4, 12), 12);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t5, 13), 13);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t6, 14), 14);
+    tokens.push(TokenKind::EOL, 15);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::XOR), 16);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 17);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 18);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 19);
+    tokens.push(TokenKind::EOL, 20);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::LI), 21);
+    tokens.push(TokenKind::REGISTER(RegisterKind::v0, 2), 22);
+    tokens.push(TokenKind::INTEGER(1), 23);
+    tokens.push(TokenKind::EOL, 24);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::MOVE), 25);
+    tokens.push(TokenKind::REGISTER(RegisterKind::a0,  4), 26);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t2, 10), 27);
+    tokens.push(TokenKind::EOL, 28);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SYSCALL), 29);
+    tokens.push(TokenKind::EOL, 30);
+    tokens.push(TokenKind::LABEL("loop".to_string(), 30, None), 31);
+    tokens.push(TokenKind::EOL, 32);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::ADDI), 33);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 34);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 35);
+    tokens.push(TokenKind::INTEGER(1), 36);
+    tokens.push(TokenKind::EOL, 37);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::BLT), 38);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0, 8), 39);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t1, 9), 40);
+    tokens.push(TokenKind::ADDRESS("loop".to_string()), 41);
+    tokens.push(TokenKind::EOL, 42);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::MUL), 43);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t4, 12), 44);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t5, 13), 45);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t6, 14), 46);
+    tokens.push(TokenKind::EOL, 47);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::J), 48);
+    tokens.push(TokenKind::ADDRESS("hoge".to_string()), 49);
+    tokens.push(TokenKind::EOL, 50);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::JAL), 51);
+    tokens.push(TokenKind::ADDRESS("fuga".to_string()), 52);
+    tokens.push(TokenKind::EOL, 53);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::SLT), 54);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t0,  8), 55);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t7, 15), 56);
+    tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 57);
+    tokens.push(TokenKind::EOL, 58);
+    tokens.push(TokenKind::INSTRUCTION(InstructionKind::NOT), 59);
+    tokens.push(TokenKind::REGISTER(RegisterKind::t7, 15), 60);
+    tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 61);
+    tokens.push(TokenKind::EOL, 62);
+
+    parse(tokens);
 }
 
