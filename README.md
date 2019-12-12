@@ -1,32 +1,42 @@
 # Very Small MIPS Interpreter
+[![Actions Status](https://github.com/kumavale/vsmi/workflows/Build/badge.svg)](https://github.com/kumavale/vsmi/actions)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)  
 A MIPS interpreter(simulator) written in Rust.  
 
 ## Supported
 - [ ] Arithmetic, Logic
     - [x] ADD[U]
     - [x] ADDI[U]
-    - [x] SUB[U]
-    - [x] MUL
-    - [x] DIV
     - [x] AND
     - [x] ANDI
+    - [ ] CLO
+    - [ ] CLZ
+    - [ ] DIV
+    - [ ] MULT[U]
+    - [x] MUL
+    - [ ] MULO[U]
+    - [ ] MADD[U]
+    - [ ] MSUB[U]
+    - [ ] NEG
+    - [x] NOR
+    - [x] NOT
     - [x] OR
     - [x] ORI
+    - [x] REM[U]
+    - [x] SLL
+    - [x] SLLV
+    - [x] SRA
+    - [x] SRAV
+    - [x] SRL
+    - [x] SRLV
+    - [ ] ROL
+    - [ ] ROR
+    - [x] SUB[U]
     - [x] XOR
     - [x] XORI
-    - [ ] NOT
-    - [ ] NOR
-    - [ ] NEG
-    - [ ] REM[U]
-    - [ ] SLL
-    - [ ] SLLV
-    - [ ] SRA
-    - [ ] SRV
-    - [ ] SRL
-    - [ ] SRLV
 - [x] Constant
-    - [x] LI
     - [x] LUI
+    - [x] LI
 - [x] Comparison
     - [x] SLT[U]
     - [x] SLTI[U]
@@ -54,31 +64,70 @@ A MIPS interpreter(simulator) written in Rust.
     - [x] JAL
     - [x] JR
     - [x] JALR
-- [ ] Load, Store
+- [ ] Load
     - [x] LA
+    - [ ] LB[U]
+    - [ ] LH[U]
     - [x] LW
+    - [ ] LWL
+    - [ ] LWR
+    - [ ] LD
+    - [ ] ULH[U]
+    - [ ] ULW
+    - [ ] LL
+- [ ] Store
+    - [ ] SB
+    - [ ] SH
     - [x] SW
+    - [ ] SWL
+    - [ ] SWR
+    - [ ] SD
+    - [ ] USH
+    - [ ] USW
+    - [ ] SC
 - [ ] Transfer
     - [x] MOVE
+    - [ ] MFHI
+    - [ ] MFLO
+    - [ ] MTHI
+    - [ ] MTLO
     - [ ] MOVN
     - [ ] MOVZ
 - [ ] Exception, Interrupt
     - [ ] SYSCALL
         - [x]  1: print_int
+        - [ ]  2: print_float
+        - [ ]  3: print_double
         - [x]  4: print_string
         - [x]  5: read_int
+        - [ ]  6: read_float
+        - [ ]  7: read_double
         - [x]  8: read_string
+        - [ ]  9: sbrk(allocate heap memory)
         - [x] 10: exit
+        - [ ] 11: print_character
+        - [ ] 12: read_character
+        - [ ] 13: open file
+        - [ ] 14: read from file
+        - [ ] 15: write to file
+        - [ ] 16: close file
+        - [ ] 17: exit2
+        - [ ] 41: random int
+        - [ ] 42: random int range
     - [ ] SYSCALL(own syscall)
-        - [x] 11: print_int + '\n'
+        - [x] 128: print_int + '\n'
     - [ ] BREAK
     - [x] NOP
 - [ ] Indicate
     - [x] .text
     - [x] .data
     - [x] .globl
+    - [x] .align
     - [x] .word
+    - [ ] .half
     - [x] .byte
+    - [ ] .float
+    - [ ] .double
     - [x] .space
     - [x] .ascii[z]
 
