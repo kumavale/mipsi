@@ -425,97 +425,114 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
     // Check all tokens
     while tokens.consume().is_some() {
 
-        // Ignore except .data segment
-        if TokenKind::INDICATE(IndicateKind::data) == *tokens.kind() {
+        // Ignore except (.data|.align|.word|.half|.byte) segment
+        match *tokens.kind() {
+            TokenKind::INDICATE(IndicateKind::data) => {
 
-            // consume EOL
-            tokens.consume().unwrap();
-            tokens.expect_eol().unwrap();
+                // consume EOL
+                tokens.consume().unwrap();
+                tokens.expect_eol().unwrap();
 
-            // until .text segment
-            while tokens.consume().is_some() {
-                if TokenKind::INDICATE(IndicateKind::text) == *tokens.kind() {
-                    break;
-                }
-
-                // Align 2^n
-                if let TokenKind::INDICATE(IndicateKind::align(n)) = *tokens.kind() {
-                    let padding = 2i32.pow(n as u32) as usize;
-                    let i = data.len() % padding;
-                    for _ in 0..i {
-                        data.push(0);
-                    }
-                    // consume EOL
-                    tokens.consume().unwrap();
-                    tokens.expect_eol().unwrap();
-                    continue;
-                }
-
-                // TokenKind::LABEL(usize) = data.len() + 1
-                if let TokenKind::LABEL(_, _, ref mut index) = &mut tokens.kind() {
-                    *index = Some(data.len() + 1);
-                    if tokens.next().unwrap().kind == TokenKind::EOL {
-                        tokens.consume().unwrap();
-                    }
-                } else {
-                    break;
-                }
-
-                // until Label or .text
-                while let Some(token) = tokens.consume() {
-                    // ignore EOL
-                    if token.kind == TokenKind::EOL {
-                        break;
-                    }
-
-                    if let TokenKind::LABEL(_, _, _) = *tokens.kind() {
-                        break;
-                    }
+                // until .text segment
+                while tokens.consume().is_some() {
                     if TokenKind::INDICATE(IndicateKind::text) == *tokens.kind() {
                         break;
                     }
 
-                    match tokens.kind() {
-                        // Big Endian
-                        TokenKind::INDICATE(IndicateKind::word(w)) => {
-                            data.push((*w>>24) as u8);
-                            data.push((*w>>16) as u8);
-                            data.push((*w>> 8) as u8);
-                            data.push( *w      as u8);
-                        },
-                        TokenKind::INDICATE(IndicateKind::half(h)) => {
-                            data.push((*h>> 8) as u8);
-                            data.push( *h      as u8);
-                        },
-                        TokenKind::INDICATE(IndicateKind::byte(b)) => {
-                            data.push(*b);
-                        },
-                        TokenKind::INDICATE(IndicateKind::space(s)) => {
-                            for _ in 0..*s {
-                                data.push(0);
-                            }
-                        },
-                        TokenKind::INDICATE(IndicateKind::ascii(s)) => {
-                            for ch in s.bytes() {
-                                data.push(ch);
-                            }
-                        },
-                        TokenKind::INDICATE(IndicateKind::asciiz(s)) => {
-                            for ch in s.bytes() {
-                                data.push(ch);
-                            }
+                    // Align 2^n
+                    if let TokenKind::INDICATE(IndicateKind::align(n)) = *tokens.kind() {
+                        let padding = 2i32.pow(n as u32) as usize;
+                        let i = data.len() % padding;
+                        for _ in 0..i {
                             data.push(0);
-                        },
-                        _ => (),
+                        }
+                        // consume EOL
+                        tokens.consume().unwrap();
+                        tokens.expect_eol().unwrap();
+                        continue;
+                    }
+
+                    // TokenKind::LABEL(usize) = data.len() + 1
+                    if let TokenKind::LABEL(_, _, ref mut index) = &mut tokens.kind() {
+                        *index = Some(data.len() + 1);
+                        if tokens.next().unwrap().kind == TokenKind::EOL {
+                            tokens.consume().unwrap();
+                        }
+                    } else {
+                        break;
+                    }
+
+                    // until Label or .text
+                    while let Some(token) = tokens.consume() {
+                        // ignore EOL
+                        if token.kind == TokenKind::EOL {
+                            break;
+                        }
+
+                        if let TokenKind::LABEL(_, _, _) = *tokens.kind() {
+                            break;
+                        }
+                        if TokenKind::INDICATE(IndicateKind::text) == *tokens.kind() {
+                            break;
+                        }
+
+                        match tokens.kind() {
+                            // Big Endian
+                            TokenKind::INDICATE(IndicateKind::word(w)) => {
+                                data.push((*w>>24) as u8);
+                                data.push((*w>>16) as u8);
+                                data.push((*w>> 8) as u8);
+                                data.push( *w      as u8);
+                            },
+                            TokenKind::INDICATE(IndicateKind::half(h)) => {
+                                data.push((*h>> 8) as u8);
+                                data.push( *h      as u8);
+                            },
+                            TokenKind::INDICATE(IndicateKind::byte(b)) => {
+                                data.push(*b);
+                            },
+                            TokenKind::INDICATE(IndicateKind::space(s)) => {
+                                for _ in 0..*s {
+                                    data.push(0);
+                                }
+                            },
+                            TokenKind::INDICATE(IndicateKind::ascii(s)) => {
+                                for ch in s.bytes() {
+                                    data.push(ch);
+                                }
+                            },
+                            TokenKind::INDICATE(IndicateKind::asciiz(s)) => {
+                                for ch in s.bytes() {
+                                    data.push(ch);
+                                }
+                                data.push(0);
+                            },
+                            _ => (),
+                        }
                     }
                 }
-            }
-        } else if let TokenKind::INDICATE(IndicateKind::align(n)) = *tokens.kind() {
-            let padding = 2i32.pow(n as u32) as usize;
-            let i = data.len() % padding;
-            for _ in 0..i {
-                data.push(0);
-            }
+            },
+            TokenKind::INDICATE(IndicateKind::align(n)) => {
+                let padding = 2i32.pow(n as u32) as usize;
+                let i = data.len() % padding;
+                for _ in 0..i {
+                    data.push(0);
+                }
+            },
+            TokenKind::INDICATE(IndicateKind::word(w)) => {
+                data.push((w>>24) as u8);
+                data.push((w>>16) as u8);
+                data.push((w>> 8) as u8);
+                data.push( w      as u8);
+            },
+            TokenKind::INDICATE(IndicateKind::half(h)) => {
+                data.push((h>> 8) as u8);
+                data.push( h      as u8);
+            },
+            TokenKind::INDICATE(IndicateKind::byte(b)) => {
+                data.push(b);
+            },
+            _ => (),
         }
     }
 

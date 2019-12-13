@@ -411,7 +411,13 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                             ".byte" => {
                                 let mut byte = 0;
                                 while let Some(word) = words.next() {
-                                    if word.starts_with(':') {
+                                    let split: Vec<&str> = word.split(':').collect();
+                                    if split.len() == 2 {
+                                        for _ in 0..split[1].parse::<u8>().unwrap() {
+                                            let byte = split[0].parse::<u8>().unwrap();
+                                            tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
+                                        }
+                                    } else if word.starts_with(':') {
                                         let mut word = word.to_string();
                                         word.remove(0);
                                         for _ in 1..word.parse::<u8>().unwrap() {
