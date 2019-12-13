@@ -102,6 +102,7 @@ pub enum IndicateKind {
     data,            // Data space start
     globl(String),   // TODO
     word(u32),       // Number(32-bit)
+    half(u16),       // (16-bit)
     byte(u8),        // 1 char(8-bit)
     space(u32),      // n byte
     ascii(String),   // String

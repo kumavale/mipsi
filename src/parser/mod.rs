@@ -483,6 +483,10 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                             data.push((*w>> 8) as u8);
                             data.push( *w      as u8);
                         },
+                        TokenKind::INDICATE(IndicateKind::half(h)) => {
+                            data.push((*h>> 8) as u8);
+                            data.push( *h      as u8);
+                        },
                         TokenKind::INDICATE(IndicateKind::byte(b)) => {
                             data.push(*b);
                         },

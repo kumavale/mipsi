@@ -116,6 +116,10 @@ A MIPS-32 interpreter(simulator) written in Rust.
         - [ ] 42: random int range
     - [ ] SYSCALL(own syscall)
         - [x] 128: print_int + '\n'
+        - [ ] 129: print_int(16)
+        - [ ] 130: print_int(0x16)
+        - [ ] 131: print_int(unsigned)
+        - [ ] 132: read_character(without enter)
     - [ ] BREAK
     - [x] NOP
 - [ ] Indicate
@@ -124,7 +128,7 @@ A MIPS-32 interpreter(simulator) written in Rust.
     - [x] .globl
     - [x] .align
     - [x] .word
-    - [ ] .half
+    - [x] .half
     - [x] .byte
     - [ ] .float
     - [ ] .double

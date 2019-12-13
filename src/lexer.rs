@@ -122,6 +122,32 @@ fn is_comment(word: &str) -> bool {
     word.starts_with('#')
 }
 
+fn is_hexadecimal(word: &str) -> Option<i32> {
+    if word.starts_with("0x") {
+        let mut hex: i32 = 0;
+        let mut s = word.to_string();
+        s.remove(0);
+        s.remove(0);  // Delete "0x"
+
+        for h in s.chars() {
+            hex = match h {
+                '0'..='9' => (hex << 4) + (h as i32 - 48),
+                'a' | 'A' => (hex << 4) + 10,
+                'b' | 'B' => (hex << 4) + 11,
+                'c' | 'C' => (hex << 4) + 12,
+                'd' | 'D' => (hex << 4) + 13,
+                'e' | 'E' => (hex << 4) + 14,
+                'f' | 'F' => (hex << 4) + 15,
+                _ => return None,
+            }
+        }
+
+        Some(hex)
+    } else {
+        None
+    }
+}
+
 fn split_words(line: &str) -> Vec<String> {
     let mut words: Vec<String> = Vec::new();
     let mut line_iter = line.chars();
@@ -225,6 +251,8 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
     let mut words = words.iter();
     while let Some(word) = words.next() {
         if let Ok(num) = word.parse::<i32>() {
+            tokens.push(TokenKind::INTEGER(num), number_of_lines);
+        } else if let Some(num) = is_hexadecimal(&word) {
             tokens.push(TokenKind::INTEGER(num), number_of_lines);
         } else if let Ok((k, i)) = is_register(&word) {
             tokens.push(TokenKind::REGISTER(k, i), number_of_lines);
@@ -347,10 +375,14 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                                 TokenKind::INDICATE(IndicateKind::globl(label))
                             },
                             ".word" => {
-                                // TODO
-                                // 0:5 => Allocate 20 consecutive bytes for 5-element integer word array
                                 while let Some(word) = words.next() {
-                                    if !is_comment(&word) {
+                                    let split: Vec<&str> = word.split(':').collect();
+                                    if split.len() == 2 {
+                                        for _ in 0..split[1].parse::<u32>().unwrap() {
+                                            let num = split[0].parse::<u32>().unwrap();
+                                            tokens.push(TokenKind::INDICATE(IndicateKind::word(num)), number_of_lines);
+                                        }
+                                    } else if !is_comment(&word) {
                                         let num = word.parse::<u32>().unwrap();
                                         tokens.push(TokenKind::INDICATE(IndicateKind::word(num)), number_of_lines);
                                     } else {
@@ -359,12 +391,34 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                                 };
                                 break;
                             },
-                            ".byte" => {
-                                // TODO
-                                // 0:5 => Allocate 20 consecutive bytes for 5-element integer word array
+                            ".half" => {
                                 while let Some(word) = words.next() {
-                                    if !is_comment(&word) {
-                                        let byte = word.parse::<u8>().unwrap();
+                                    let split: Vec<&str> = word.split(':').collect();
+                                    if split.len() == 2 {
+                                        for _ in 0..split[1].parse::<u16>().unwrap() {
+                                            let half = split[0].parse::<u16>().unwrap();
+                                            tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
+                                        }
+                                    } else if !is_comment(&word) {
+                                        let half = word.parse::<u16>().unwrap();
+                                        tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
+                                    } else {
+                                        break;
+                                    }
+                                };
+                                break;
+                            },
+                            ".byte" => {
+                                let mut byte = 0;
+                                while let Some(word) = words.next() {
+                                    if word.starts_with(':') {
+                                        let mut word = word.to_string();
+                                        word.remove(0);
+                                        for _ in 1..word.parse::<u8>().unwrap() {
+                                            tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
+                                        }
+                                    } else if !is_comment(&word) {
+                                        byte = word.parse::<u8>().unwrap();
                                         tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
                                     } else {
                                         break;
