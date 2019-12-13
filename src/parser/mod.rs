@@ -12,6 +12,8 @@ use crate::parser::eval::*;
 pub fn parse(mut tokens: Tokens) {
 
     let mut registers: [i32; 32] = [0; 32];
+    let mut hi: u32 = 0;
+    let mut lo: u32 = 0;
     // let **registers = { &zero, &at, ...};
 
     let mut data:  Vec<u8> = Vec::new();
@@ -51,14 +53,93 @@ pub fn parse(mut tokens: Tokens) {
             InstructionKind::MUL =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y),
             InstructionKind::DIV =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x / y),
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::DIV),
+            InstructionKind::DIVU =>
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::DIVU),
             InstructionKind::REM =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x % y),
 
+            InstructionKind::MULO =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y),
+            InstructionKind::MULOU =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 * y as u32) as i32),
+            InstructionKind::CLO =>
+                eval_arithmetic(&mut registers, &mut tokens, move |x, _| {
+                    let mut cnt: i32 = 0;
+                    for i in (0..=31).rev() {
+                        if (x as usize) >> i & 1 != 1 { break; }
+                        cnt += 1;
+                    }
+                    cnt
+                }),
+            InstructionKind::CLZ =>
+                eval_arithmetic(&mut registers, &mut tokens, move |x, _| {
+                    let mut cnt: i32 = 0;
+                    for i in (0..=31).rev() {
+                        if (x as usize) >> i & 1 != 0 { break; }
+                        cnt += 1;
+                    }
+                    cnt
+                }),
+            InstructionKind::ROR => {
+                tokens.consume().unwrap();
+                let rd_idx = tokens.expect_register().unwrap();
+                registers[rd_idx] = {
+                    tokens.consume().unwrap();
+                    let rs_idx = tokens.expect_register().unwrap();
+                    let rs = registers[rs_idx];
+                    tokens.consume().unwrap();
+                    let rt = {
+                        if let Ok(rt_idx) = tokens.expect_register() {
+                            registers[rt_idx]
+                        } else if let Ok(num) = tokens.expect_integer() {
+                            num
+                        } else {
+                            panic!("ROR: invalid token");
+                        }
+                    };
+                    registers[1] = (rs as u32 >> rt) as i32;
+                    registers[rd_idx] = (rs << (32-rt)) as i32;
+                    registers[rd_idx] | registers[1]
+                };
+            },
+            InstructionKind::ROL => {
+                tokens.consume().unwrap();
+                let rd_idx = tokens.expect_register().unwrap();
+                registers[rd_idx] = {
+                    tokens.consume().unwrap();
+                    let rs_idx = tokens.expect_register().unwrap();
+                    let rs = registers[rs_idx];
+                    tokens.consume().unwrap();
+                    let rt = {
+                        if let Ok(rt_idx) = tokens.expect_register() {
+                            registers[rt_idx]
+                        } else if let Ok(num) = tokens.expect_integer() {
+                            num
+                        } else {
+                            panic!("ROL: invalid token");
+                        }
+                    };
+                    registers[1] = rs << rt;
+                    registers[rd_idx] = (rs as u32 >> (32-rt)) as i32;
+                    registers[rd_idx] | registers[1]
+                };
+            },
+
             InstructionKind::NOR =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| !(x | y)),
-            InstructionKind::NOT =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, _| !x),
+            InstructionKind::NOT => {
+                tokens.consume().unwrap();
+                let rd_idx = tokens.expect_register().unwrap();
+                registers[rd_idx] = {
+                    tokens.consume().unwrap();
+                    let register_idx = tokens.expect_register().unwrap();
+                    !registers[register_idx]
+                };
+            },
+            InstructionKind::NEG |
+            InstructionKind::NEGU => // UNSTABLE
+                eval_arithmetic(&mut registers, &mut tokens, |x, _| -x),
 
             InstructionKind::SLL |
             InstructionKind::SLLV =>

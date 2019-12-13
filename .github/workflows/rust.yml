@@ -25,6 +25,6 @@ jobs:
 
     - name: Run all example
       run: |
-          chmod +x ./example/test.sh
-          ./example/test.sh
+          chmod +x ./test.sh
+          ./test.sh
 

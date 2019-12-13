@@ -1,23 +1,23 @@
 # Very Small MIPS Interpreter
 [![Actions Status](https://github.com/kumavale/vsmi/workflows/Build/badge.svg)](https://github.com/kumavale/vsmi/actions)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)  
-A MIPS interpreter(simulator) written in Rust.  
+A MIPS-32 interpreter(simulator) written in Rust.  
 
 ## Supported
-- [ ] Arithmetic, Logic
+- [x] Arithmetic, Logic
     - [x] ADD[U]
     - [x] ADDI[U]
     - [x] AND
     - [x] ANDI
-    - [ ] CLO
-    - [ ] CLZ
-    - [ ] DIV
-    - [ ] MULT[U]
+    - [x] CLO
+    - [x] CLZ
+    - [x] DIV[U]
+    - [x] MULT[U]
     - [x] MUL
-    - [ ] MULO[U]
-    - [ ] MADD[U]
-    - [ ] MSUB[U]
-    - [ ] NEG
+    - [x] MULO[U]
+    - [x] MADD[U]
+    - [x] MSUB[U]
+    - [x] NEG[U]
     - [x] NOR
     - [x] NOT
     - [x] OR
@@ -29,8 +29,8 @@ A MIPS interpreter(simulator) written in Rust.
     - [x] SRAV
     - [x] SRL
     - [x] SRLV
-    - [ ] ROL
-    - [ ] ROR
+    - [x] ROL
+    - [x] ROR
     - [x] SUB[U]
     - [x] XOR
     - [x] XORI

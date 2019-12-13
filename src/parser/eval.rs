@@ -17,17 +17,82 @@ where
             }
 
             let mut r2 = 0;
-            if tokens.consume().is_some() {
+            if tokens.next().unwrap().kind != TokenKind::EOL {
+                tokens.consume().unwrap();
                 if let Ok(register_idx) = tokens.expect_register() {
                     r2 = registers[register_idx];
                 } else if let Ok(num) = tokens.expect_integer() {
                     r2 = num;
                 }
+                fun(r1, r2)
             } else {
-                // NOT
+                // CLO, CLZ
+                fun(r1, 0)
             }
-            fun(r1, r2)
         };
+    }
+}
+
+pub fn eval_arithmetic_hilo(registers: &mut[i32], tokens: &mut Tokens,
+    hi: &mut u32, lo: &mut u32, kind: InstructionKind)
+{
+    tokens.consume().unwrap();
+    let rd_idx = tokens.expect_register().unwrap();
+    tokens.consume().unwrap();
+    let rs_idx = tokens.expect_register().unwrap();
+
+    match kind {
+        InstructionKind::DIV => {
+            if tokens.next().unwrap().kind != TokenKind::EOL {
+                tokens.consume().unwrap();
+                let rt_idx = tokens.expect_register().unwrap();
+                registers[rd_idx] = registers[rs_idx] / registers[rt_idx];
+            } else {
+                *lo = (registers[rd_idx] / registers[rs_idx]) as u32;
+                *hi = (registers[rd_idx] % registers[rs_idx]) as u32;
+            }
+        },
+        InstructionKind::DIVU => {
+            if tokens.next().unwrap().kind != TokenKind::EOL {
+                tokens.consume().unwrap();
+                let rt_idx = tokens.expect_register().unwrap();
+                registers[rd_idx] = (registers[rs_idx] as u32 / registers[rt_idx] as u32) as i32;
+            } else {
+                *lo = registers[rd_idx] as u32 / registers[rs_idx] as u32;
+                *hi = registers[rd_idx] as u32 % registers[rs_idx] as u32;
+            }
+        },
+        InstructionKind::MULT => {
+            let ans = registers[rd_idx] as i64 * registers[rs_idx] as i64;
+            *lo = ans as u32;
+            *hi = ((ans as u64) >> 32) as u32;
+        },
+        InstructionKind::MULTU => {
+            let ans = registers[rd_idx] as u64 * registers[rs_idx] as u64;
+            *lo = ans as u32;
+            *hi = (ans >> 32) as u32;
+        },
+        InstructionKind::MADD => {
+            let ans = registers[rd_idx] as i64 * registers[rs_idx] as i64;
+            *lo += ans as u32;
+            *hi += ((ans as u64) >> 32) as u32;
+        },
+        InstructionKind::MADDU => {
+            let ans = registers[rd_idx] as u64 * registers[rs_idx] as u64;
+            *lo += ans as u32;
+            *hi += (ans >> 32) as u32;
+        },
+        InstructionKind::MSUB => {
+            let ans = registers[rd_idx] as i64 * registers[rs_idx] as i64;
+            *lo -= ans as u32;
+            *hi -= ((ans as u64) >> 32) as u32;
+        },
+        InstructionKind::MSUBU => {
+            let ans = registers[rd_idx] as u64 * registers[rs_idx] as u64;
+            *lo -= ans as u32;
+            *hi -= (ans >> 32) as u32;
+        },
+        _ => println!("eval_arithmetic_hilo(): invalid TokenKind: {:?}", kind),
     }
 }
 

@@ -8,11 +8,29 @@ pub enum InstructionKind {
     SUB,      // Rd, Rs, Rt    | Rd = Rs - Rt
     SUBU,     // Rd, Rs, Rt    | Rd = Rs - Rt
     MUL,      // Rd, Rs, Rt    | Rd = Rs * Rt
-    DIV,      // Rd, Rs, Rt    | Rd = Rs / Rt
     REM,      // Rd, Rs, Rt    | Rd = Rs % Rt
+    REMU,     // Rd, Rs, Rt    | Rd = Rs % Rt
+
+    MULO,     // Rd, Rs, Src   | Rd = Rs * Src
+    MULOU,    // Rd, Rs, Src   | Rd = Rs * Src
+    CLO,      // Rd, Rs        | Rd = Count leading 1 in Rs
+    CLZ,      // Rd, Rs        | Rd = Count leading 0 in Rs
+    ROR,      // Rd, Rs, Rt    | Rd = Shift and rotation
+    ROL,      // Rd, Rs, Rt    | Rd = Shift and rotation
+
+    DIV,      // Rd, Rs, [Rt]  | Rd = Rs / Rt  or  lo=Rd/Rs, hi=Rd%Rs
+    DIVU,     // Rd, Rs, [Rt]  | Rd = Rs / Rt  or  lo=Rd/Rs, hi=Rd%Rs
+    MULT,     // Rd, Rs        | lo = (Rd*Rs)[31:0], hi=(Rd*Rs)[63:32]
+    MULTU,    // Rd, Rs        | lo = (Rd*Rs)[31:0], hi=(Rd*Rs)[63:32]
+    MADD,     // Rd, Rs        | hi:lo += Rd * Rs
+    MADDU,    // Rd, Rs        | hi:lo += Rd * Rs
+    MSUB,     // Rd, Rs        | hi:lo += Rd * Rs
+    MSUBU,    // Rd, Rs        | hi:lo += Rd * Rs
 
     NOR,      // Rd, Rs, Rt    | Rd = ~(Rs | Rt)
     NOT,      // Rd, Rs        | Rd = ~Rs
+    NEG,      // Rd, Rs        | Rd = -Rs
+    NEGU,     // Rd, Rs        | Rd = -Rs
 
     SLL,      // Rd, Rs, Shamt | Rd = Rs << Shamt
     SLLV,     // Rd, Rs, Rt    | Rd = Rs << Rt
