@@ -1,4 +1,4 @@
-# Very Small MIPS Interpreter
+# MIPS Interpreter
 [![Actions Status](https://github.com/kumavale/vsmi/workflows/Build/badge.svg)](https://github.com/kumavale/vsmi/actions)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)  
 A MIPS-32 interpreter(simulator) written in Rust.  
@@ -137,5 +137,5 @@ A MIPS-32 interpreter(simulator) written in Rust.
     - [x] PRTS
 
 ## Note
-1. Unsigned integers are not supported, but instead behave as signed integers.
+1. ~~Unsigned integers are not supported, but instead behave as signed integers.~~  
 
