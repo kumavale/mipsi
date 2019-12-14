@@ -26,6 +26,18 @@ pub fn parse(mut tokens: Tokens) {
     while let Some(token) = tokens.consume() {
         //println!("{:?}", token); continue;
 
+        // Skip until .text
+        if TokenKind::INDICATE(IndicateKind::data) == token.kind {
+            while let Some(token) = tokens.consume() {
+                if TokenKind::INDICATE(IndicateKind::text) == token.kind {
+                    break;
+                }
+            }
+            if tokens.is_none() {
+                break;
+            }
+        }
+
         // Skip LABEL, INDICATE and EOL
         if let TokenKind::LABEL(_, _, _) = tokens.kind() {
             tokens.consume().unwrap();
@@ -52,12 +64,27 @@ pub fn parse(mut tokens: Tokens) {
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 - y as u32) as i32),
             InstructionKind::MUL =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y),
+            InstructionKind::REM =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x % y),
+            InstructionKind::REMU =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 % y as u32) as i32),
+
             InstructionKind::DIV =>
                 eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::DIV),
             InstructionKind::DIVU =>
                 eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::DIVU),
-            InstructionKind::REM =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x % y),
+            InstructionKind::MULT =>
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MULT),
+            InstructionKind::MULTU =>
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MULTU),
+            InstructionKind::MADD =>
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MADD),
+            InstructionKind::MADDU =>
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MADDU),
+            InstructionKind::MSUB =>
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MSUB),
+            InstructionKind::MSUBU =>
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MSUBU),
 
             InstructionKind::MULO =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y),
@@ -312,22 +339,19 @@ pub fn parse(mut tokens: Tokens) {
                     },
                     // exit
                     10 => break,
-
-                    // My define
-                    // print_int + '\n'
-                    128 => println!("{}", registers[4]),  // $a0
-                    // print_int(unsigned)
-                    //129 => println!("{}", registers[4]),  // $a0
-                    // print_int + '\n'
-                    //130 => println!("{}", registers[4]),  // $a0
-                    // read_char (without enter)
-                    //131 => (),
-
                     _ => println!("SYSCALL: invalid code: {}", registers[2]),
                 }
             },
             InstructionKind::NOP => (),  // Do nothing
-            _ => (),
+
+            // My own
+            InstructionKind::PRTN => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTN),
+            InstructionKind::PRTI => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTI),
+            InstructionKind::PRTH => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTH),
+            InstructionKind::PRTX => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTX),
+            InstructionKind::PRTC => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTC),
+            InstructionKind::PRTS => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTS),
+            //_ => (),
         }
 
         // expect TokenKind::EOL

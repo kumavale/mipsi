@@ -93,6 +93,14 @@ pub enum InstructionKind {
     /// Exception, Interrupt
     SYSCALL,  //
     NOP,      // Do nothing
+
+    /// My own
+    PRTN,     //                       | Print '\n'
+    PRTI,     // Rs|literal            | Print integer
+    PRTH,     // Rs|literal            | Print hex
+    PRTX,     // Rs|literal            | Print hex (add 0x)
+    PRTC,     // Rs|literal|label      | Print char
+    PRTS,     // Rs|literal|label      | Print string
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -136,7 +144,8 @@ pub enum TokenKind {
     STACK(RegisterKind, usize, i32),      // (_, Append index)
     DATA(RegisterKind, usize, String),    // (_, Label name)
     LABEL(String, usize, Option<usize>),  // (Literal, Token index, Data index)
-    ADDRESS(String),                      // Literal
+    ADDRESS(String),                      // Label
+    LITERAL(String),                      // Literal
     INVALID(String),                      // Invalid string
     EOL,                                  // End of Line
 }
@@ -150,6 +159,7 @@ pub struct Token {
 #[derive(Debug)]
 pub struct Tokens {
     pub token: Vec<Token>,  // Token's vector
+    //addresses: Vec<(String, idx)> // (label name, token index)
     idx: usize,             // Current index
     foremost: bool,         // Foremost
     length: usize,          // Token length
@@ -234,9 +244,13 @@ impl Tokens {
         }
     }
 
+    pub fn is_none(&self) -> bool {
+        self.idx + 1 >= self.length
+    }
+
     /// Get data index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
     pub fn expect_address(&self) -> Result<usize, String> {
-        if let TokenKind::ADDRESS(s) = self.token[self.idx].clone().kind {
+        if let TokenKind::ADDRESS(s) = self.token[self.idx].kind.clone() {
             for t in &self.token {
                 if let TokenKind::LABEL(name, _, idx) = &t.kind {
                     if *s == *name {
@@ -254,7 +268,7 @@ impl Tokens {
 
     /// Get label index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
     pub fn expect_label(&self) -> Result<usize, String> {
-        if let TokenKind::ADDRESS(s) = self.token[self.idx].clone().kind {
+        if let TokenKind::ADDRESS(s) = self.token[self.idx].kind.clone() {
             for t in &self.token {
                 if let TokenKind::LABEL(name, idx, _) = &t.kind {
                     if *s == *name {
@@ -300,7 +314,7 @@ impl Tokens {
 
     /// Return: Ok((register_idx, data index))
     pub fn expect_data(&self) -> Result<(usize, usize), String> {
-        if let TokenKind::DATA(_, r_i, s) = self.token[self.idx].clone().kind {
+        if let TokenKind::DATA(_, r_i, s) = self.token[self.idx].kind.clone() {
             for t in &self.token {
                 if let TokenKind::LABEL(name, _, Some(d_i)) = &t.kind {
                     if *s == *name {
@@ -322,6 +336,15 @@ impl Tokens {
         } else {
             let t = self.token[self.idx].clone();
             Err(format!("{}: expect TokenKind::INTEGER(i32). but got: {:?}", t.line, t.kind))
+        }
+    }
+
+    pub fn expect_literal(&self) -> Result<String, String> {
+        if let TokenKind::LITERAL(l) = self.token[self.idx].kind.clone() {
+            Ok(l)
+        } else {
+            let t = self.token[self.idx].clone();
+            Err(format!("{}: expect TokenKind::LITERAL(String). but got: {:?}", t.line, t.kind))
         }
     }
 

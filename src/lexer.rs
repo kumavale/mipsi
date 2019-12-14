@@ -159,9 +159,10 @@ fn split_words(line: &str) -> Vec<String> {
             _ => (),
         }
 
-        // string for .asciiz
+        // string for .asciiz | literal
         if ch == '"' {
-            let mut asciiz = String::new();
+            //let mut asciiz = String::new();
+            let mut asciiz = format!("\"");
             while let Some(mut ch2) = line_iter.next() {
                 if ch2 != '"' {
                     if ch2 == '\\' {
@@ -180,6 +181,7 @@ fn split_words(line: &str) -> Vec<String> {
                     asciiz = format!("{}{}", asciiz, ch2);
                     continue;
                 }
+                asciiz.push('"');
                 break;
             }
             words.push(asciiz);
@@ -359,6 +361,13 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 // Exception, Interrupt
                 "SYSCALL" => TokenKind::INSTRUCTION(InstructionKind::SYSCALL),
                 "NOP"     => TokenKind::INSTRUCTION(InstructionKind::NOP),
+                // My own
+                "PRTN"    => TokenKind::INSTRUCTION(InstructionKind::PRTN),
+                "PRTI"    => TokenKind::INSTRUCTION(InstructionKind::PRTI),
+                "PRTH"    => TokenKind::INSTRUCTION(InstructionKind::PRTH),
+                "PRTX"    => TokenKind::INSTRUCTION(InstructionKind::PRTX),
+                "PRTC"    => TokenKind::INSTRUCTION(InstructionKind::PRTC),
+                "PRTS"    => TokenKind::INSTRUCTION(InstructionKind::PRTS),
                 _ =>
                     if is_label(&word) {
                         let mut identifier = word.to_string();
@@ -437,11 +446,15 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                                 TokenKind::INDICATE(IndicateKind::space(length))
                             },
                             ".ascii" => {
-                                let s = words.next().unwrap().to_string();
+                                let mut s = words.next().unwrap().to_string();
+                                s.remove(0);
+                                s.remove(s.len()-1);
                                 TokenKind::INDICATE(IndicateKind::ascii(s))
                             },
                             ".asciiz" => {
-                                let s = words.next().unwrap().to_string();
+                                let mut s = words.next().unwrap().to_string();
+                                s.remove(0);
+                                s.remove(s.len()-1);
                                 TokenKind::INDICATE(IndicateKind::asciiz(s))
                             },
                             ".align" => {
@@ -451,7 +464,15 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                             _ => TokenKind::INVALID(format!("invalid indicate: {}", word))
                         }
                     } else {
-                        TokenKind::ADDRESS(word.to_string())
+                        if word.starts_with('"')  && word.ends_with('"') ||
+                           word.starts_with('\'') && word.ends_with('\'') {
+                            let mut word = word.to_string();
+                            word.remove(0);
+                            word.remove(word.len()-1);
+                            TokenKind::LITERAL(word)
+                        } else {
+                            TokenKind::ADDRESS(word.to_string())
+                        }
                     }
             };
 

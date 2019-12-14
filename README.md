@@ -114,12 +114,6 @@ A MIPS-32 interpreter(simulator) written in Rust.
         - [ ] 17: exit2
         - [ ] 41: random int
         - [ ] 42: random int range
-    - [ ] SYSCALL(own syscall)
-        - [x] 128: print_int + '\n'
-        - [ ] 129: print_int(16)
-        - [ ] 130: print_int(0x16)
-        - [ ] 131: print_int(unsigned)
-        - [ ] 132: read_character(without enter)
     - [ ] BREAK
     - [x] NOP
 - [ ] Indicate
@@ -134,6 +128,13 @@ A MIPS-32 interpreter(simulator) written in Rust.
     - [ ] .double
     - [x] .space
     - [x] .ascii[z]
+- [ ] My own
+    - [x] PRTN
+    - [x] PRTI
+    - [x] PRTH
+    - [x] PRTX
+    - [x] PRTC
+    - [x] PRTS
 
 ## Note
 1. Unsigned integers are not supported, but instead behave as signed integers.
