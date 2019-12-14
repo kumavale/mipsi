@@ -34,9 +34,8 @@ exit:
 	syscall
 
 print_output:
-    li $v0, 128
-    move $a0, $t1
-    syscall
+    prti $t1
+	prtn
     jr $ra
 
 fibonacci:

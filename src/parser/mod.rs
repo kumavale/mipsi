@@ -339,18 +339,24 @@ pub fn parse(mut tokens: Tokens) {
                     },
                     // exit
                     10 => break,
-                    _ => println!("SYSCALL: invalid code: {}", registers[2]),
+                    _ => panic!("SYSCALL: invalid code: {}", registers[2]),
                 }
             },
             InstructionKind::NOP => (),  // Do nothing
 
             // My own
-            InstructionKind::PRTN => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTN),
-            InstructionKind::PRTI => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTI),
-            InstructionKind::PRTH => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTH),
-            InstructionKind::PRTX => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTX),
-            InstructionKind::PRTC => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTC),
-            InstructionKind::PRTS => eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTS),
+            InstructionKind::PRTN =>
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTN),
+            InstructionKind::PRTI =>
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTI),
+            InstructionKind::PRTH =>
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTH),
+            InstructionKind::PRTX =>
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTX),
+            InstructionKind::PRTC =>
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTC),
+            InstructionKind::PRTS =>
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTS),
             //_ => (),
         }
 

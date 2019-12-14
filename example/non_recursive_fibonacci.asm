@@ -15,13 +15,10 @@ main:
     # if ($a0 < 2) goto exit;
     blt $a0, 2, exit
 
-    move $t5, $a0
-    li $v0, 128
-    li $a0, 0
-    syscall
-    li $a0, 1
-    syscall
-    move $a0, $t5
+    prti 0
+	prtn
+    prti 1
+	prtn
 
     jal fib
 
@@ -80,10 +77,7 @@ return1:
     jr $ra
 
 print_output:
-    move $t5, $a0
-    li $v0, 128
-    move $a0, $t1
-    syscall
-    move $a0, $t5
+    prti $t1
+	prtn
     jr $ra
 
