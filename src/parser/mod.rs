@@ -9,15 +9,10 @@ use crate::parser::eval::*;
 
 
 #[allow(clippy::cognitive_complexity)]
-pub fn parse(mut tokens: Tokens) {
-
-    let mut registers: [i32; 32] = [0; 32];
-    let mut hi: u32 = 0;
-    let mut lo: u32 = 0;
-    // let **registers = { &zero, &at, ...};
-
-    let mut data:  Vec<u8> = Vec::new();
-    let mut stack: Vec<u8> = vec![0];
+pub fn parse(mut tokens: &mut Tokens,
+    mut registers: &mut [i32], mut hi: &mut u32, mut lo: &mut u32,
+    mut data: &mut Vec<u8>, mut stack: &mut Vec<u8>)
+{
 
     data_analysis(&mut tokens, &mut data);
     //println!("data: {:?}", data);
@@ -41,12 +36,11 @@ pub fn parse(mut tokens: Tokens) {
         // Skip LABEL, INDICATE and EOL
         if let TokenKind::LABEL(_, _, _) = tokens.kind() {
             tokens.consume().unwrap();
-            if tokens.expect_eol().is_ok() { continue; }
         }
         if let TokenKind::INDICATE(_) = tokens.kind() {
             while let TokenKind::INDICATE(_) = tokens.consume().unwrap().kind { continue; }
-            if tokens.expect_eol().is_ok() { continue; }
         }
+        if tokens.expect_eol().is_ok() { continue; }
 
         let instruction_kind = tokens.expect_instruction().unwrap();
 
@@ -338,7 +332,15 @@ pub fn parse(mut tokens: Tokens) {
                         }
                     },
                     // exit
-                    10 => break,
+                    10 => {
+                        for r in registers { *r = 0; }
+                        *hi = 0;
+                        *lo = 0;
+                        data.clear();
+                        stack.clear();
+                        tokens.init();
+                        break;
+                    },
                     _ => panic!("SYSCALL: invalid code: {}", registers[2]),
                 }
             },
@@ -357,6 +359,8 @@ pub fn parse(mut tokens: Tokens) {
                 eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTC),
             InstructionKind::PRTS =>
                 eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTS),
+            //InstructionKind::DISPT =>
+            //    eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTS),
             //_ => (),
         }
 
@@ -375,9 +379,9 @@ pub fn parse(mut tokens: Tokens) {
         }
     }
 
-    display_data_per_4byte(&data);
-    display_stack(&stack);
-    display_register(&registers);
+    //display_data_per_4byte(&data);
+    //display_stack(&stack);
+    //display_register(&registers);
 }
 
 /// Return signed integer (32-bit)
@@ -426,8 +430,9 @@ pub fn get_string(data: &[u8], stack: &[u8], index: i32) -> String {
     if index < 0 {
         let mut i = (-index - 1) as usize;
         let mut s = String::new();
+        let stack_len = stack.len();
 
-        while stack[i] != 0 {
+        while i < stack_len && stack[i] != 0 {
             s = format!("{}{}", s, stack[i] as char);
             i += 1;
         }
@@ -437,8 +442,9 @@ pub fn get_string(data: &[u8], stack: &[u8], index: i32) -> String {
     } else if 0 < index {
         let mut i = (index - 1) as usize;
         let mut s = String::new();
+        let data_len = data.len();
 
-        while data[i] != 0 {
+        while i < data_len && data[i] != 0 {
             s = format!("{}{}", s, data[i] as char);
             i += 1;
         }
@@ -452,34 +458,32 @@ pub fn get_string(data: &[u8], stack: &[u8], index: i32) -> String {
 /// Push to data: &Vec<u8> from .data segment's data
 fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
 
+    let old_idx = tokens.idx();
+    tokens.goto(if old_idx == 0 {0} else {old_idx-1});
+
     // Check all tokens
     while tokens.consume().is_some() {
 
-        // Ignore except (.data|.align|.word|.half|.byte) segment
-        match *tokens.kind() {
-            TokenKind::INDICATE(IndicateKind::data) => {
+        // Ignore except .data|.align segment
+        match tokens.token[tokens.idx()].kind {
+            TokenKind::INDICATE(IndicateKind::data) | _ if tokens.data_area_now => {
+
+                tokens.data_area_now = true;
 
                 // consume EOL
-                tokens.consume().unwrap();
-                tokens.expect_eol().unwrap();
+                while let Some(token) = tokens.next() {
+                    if token.kind == TokenKind::EOL {
+                        tokens.consume().unwrap();
+                    } else {
+                        break;
+                    }
+                }
 
                 // until .text segment
                 while tokens.consume().is_some() {
                     if TokenKind::INDICATE(IndicateKind::text) == *tokens.kind() {
+                        tokens.data_area_now = false;
                         break;
-                    }
-
-                    // Align 2^n
-                    if let TokenKind::INDICATE(IndicateKind::align(n)) = *tokens.kind() {
-                        let padding = 2i32.pow(n as u32) as usize;
-                        let i = data.len() % padding;
-                        for _ in 0..i {
-                            data.push(0);
-                        }
-                        // consume EOL
-                        tokens.consume().unwrap();
-                        tokens.expect_eol().unwrap();
-                        continue;
                     }
 
                     // TokenKind::LABEL(usize) = data.len() + 1
@@ -488,21 +492,36 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                         if tokens.next().unwrap().kind == TokenKind::EOL {
                             tokens.consume().unwrap();
                         }
-                    } else {
-                        break;
                     }
 
-                    // until Label or .text
-                    while let Some(token) = tokens.consume() {
-                        // ignore EOL
-                        if token.kind == TokenKind::EOL {
-                            break;
-                        }
+                    match &*tokens.kind() {
+                        // Align 2^n
+                        TokenKind::INDICATE(IndicateKind::align(n)) => {
+                            let padding = 2i32.pow(*n as u32) as usize;
+                            let i = data.len() % padding;
+                            for _ in 0..i {
+                                data.push(0);
+                            }
+                        },
+                        TokenKind::INDICATE(IndicateKind::word(w)) => {
+                            data.push((*w>>24) as u8);
+                            data.push((*w>>16) as u8);
+                            data.push((*w>> 8) as u8);
+                            data.push( *w      as u8);
+                        },
+                        TokenKind::INDICATE(IndicateKind::half(h)) => {
+                            data.push((*h>> 8) as u8);
+                            data.push( *h      as u8);
+                        },
+                        TokenKind::INDICATE(IndicateKind::byte(b)) => {
+                            data.push(*b);
+                        },
+                        _ => (),
+                    }
 
-                        if let TokenKind::LABEL(_, _, _) = *tokens.kind() {
-                            break;
-                        }
-                        if TokenKind::INDICATE(IndicateKind::text) == *tokens.kind() {
+                    // until EOL
+                    while let Some(token) = tokens.consume() {
+                        if token.kind == TokenKind::EOL {
                             break;
                         }
 
@@ -549,25 +568,11 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                     data.push(0);
                 }
             },
-            TokenKind::INDICATE(IndicateKind::word(w)) => {
-                data.push((w>>24) as u8);
-                data.push((w>>16) as u8);
-                data.push((w>> 8) as u8);
-                data.push( w      as u8);
-            },
-            TokenKind::INDICATE(IndicateKind::half(h)) => {
-                data.push((h>> 8) as u8);
-                data.push( h      as u8);
-            },
-            TokenKind::INDICATE(IndicateKind::byte(b)) => {
-                data.push(b);
-            },
             _ => (),
         }
     }
 
-    data.push(0);
-    tokens.reset();
+    tokens.goto(old_idx);
 }
 
 #[test]
@@ -639,6 +644,12 @@ fn test_parse() {
     tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 61);
     tokens.push(TokenKind::EOL, 62);
 
-    parse(tokens);
+    let mut registers: [i32; 32] = [0; 32];
+    let mut hi: u32 = 0;
+    let mut lo: u32 = 0;
+    let mut data:  Vec<u8> = Vec::new();
+    let mut stack: Vec<u8> = vec![0];
+
+    parse(&mut tokens, &mut registers, &mut hi, &mut lo, &mut data, &mut stack);
 }
 

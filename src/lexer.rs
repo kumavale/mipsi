@@ -843,12 +843,12 @@ PRTN PRTI PRTH PRTX PRTC PRTS
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(4)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(4)));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(2147483648)));
-    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(4294967295)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(2_147_483_648)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(4_294_967_295)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(0)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(1)));
-    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(2147483647)));
-    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(4294967295)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(2_147_483_647)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(4_294_967_295)));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(32768)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(65535)));
@@ -869,6 +869,7 @@ PRTN PRTI PRTH PRTX PRTC PRTS
 
 #[test]
 #[cfg(test)]
+#[allow(clippy::cognitive_complexity)]
 fn test_tokenize_hello_world() {
     use std::io::{BufRead, BufReader};
 

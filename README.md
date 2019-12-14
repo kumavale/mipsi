@@ -1,7 +1,27 @@
 # MIPS Interpreter
-[![Actions Status](https://github.com/kumavale/vsmi/workflows/Build/badge.svg)](https://github.com/kumavale/vsmi/actions)
+[![Actions Status](https://github.com/kumavale/mipsi/workflows/Build/badge.svg)](https://github.com/kumavale/mipsi/actions)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)  
 A MIPS-32 interpreter(simulator) written in Rust.  
+
+
+## How to run
+If no argument, run with REPL  
+```sh
+cargo run --release [file]
+```
+
+### Debug run
+```sh
+[ENVIRONMENT VARIABLES] cargo run --release [file]
+```  
+( e.g. `TOKEN_TRACE=1 REGISTER_TRACE=1 cargo run --release file.asm` )
+
+##### ENVIRONMENT VARIABLES
+* TOKEN_TRACE  
+* DATA_TRACE  
+* STACK_TRACE  
+* REGISTER_TRACE  
+
 
 ## Supported
 - [x] Arithmetic, Logic
@@ -135,6 +155,7 @@ A MIPS-32 interpreter(simulator) written in Rust.
     - [x] PRTX
     - [x] PRTC
     - [x] PRTS
+
 
 ## Note
 1. ~~Unsigned integers are not supported, but instead behave as signed integers.~~  

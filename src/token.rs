@@ -159,18 +159,31 @@ pub struct Token {
 #[derive(Debug)]
 pub struct Tokens {
     pub token: Vec<Token>,  // Token's vector
-    //addresses: Vec<(String, idx)> // (label name, token index)
+    pub data_area_now: bool,
+
     idx: usize,             // Current index
     foremost: bool,         // Foremost
     length: usize,          // Token length
+    //addresses: Vec<(String, idx)> // (label name, token index)
 }
-
-//pub type Token = (TokenKind, u32);
 
 impl Tokens {
     pub fn new() -> Self {
         let token: Vec<Token> = Vec::new();
-        Tokens { token, idx: 0, foremost: true, length: 0 }
+        Tokens { token,
+                 data_area_now: true,
+                 idx: 0,
+                 foremost: true,
+                 length: 0,
+        }
+    }
+
+    pub fn init(&mut self) {
+        self.token.clear();
+        self.idx = 0;
+        self.foremost = true;
+        self.length = 0;
+        self.data_area_now = true;
     }
 
     pub fn len(&self) -> usize {
@@ -225,6 +238,9 @@ impl Tokens {
                 &self.token[idx+1].line, idx+1,  &self.token[idx+1].kind);
         }
 
+        if idx == 0 {
+            self.foremost = true;
+        }
         self.idx = idx;
     }
 

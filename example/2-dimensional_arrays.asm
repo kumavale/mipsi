@@ -1,4 +1,5 @@
 
+.data
 arr1:	.word  32:4
         .word  32:4
         .word  32:4
