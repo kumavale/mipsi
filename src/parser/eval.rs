@@ -277,8 +277,46 @@ pub fn eval_myown(registers: &[i32], tokens: &mut Tokens, data: &[u8], stack: &[
             tokens.consume().unwrap();
             if let Ok(r_idx) = tokens.expect_register() {
                 print!("{}", registers[r_idx]);
+            } else if let Ok(num) = tokens.expect_integer() {
+                print!("{}", num);
+            } else if let Ok((r_idx, s_idx)) = tokens.expect_stack() { // data or stack
+                let idx = registers[r_idx] + s_idx;
+
+                let is_data_idx = if idx < 0 {
+                    false
+                } else if 0 < idx {
+                    true
+                } else {
+                    panic!("eval_myown(): invalid index: 0");
+                };
+
+                // data index
+                if is_data_idx {
+                    let idx = registers[r_idx] as isize;
+                    print!("{}", get_int(&data, &stack, idx, 4));
+
+                    // stack index
+                } else {
+                    let stack_idx = (-idx) as usize;
+                    let num = {
+                        let mut int = 0;
+                        for i in 0..4 {
+                            int |= (stack[stack_idx-(4-1-i)] as i32) << ((4-1-i) * 8);
+                        }
+                        int
+                    };
+                    print!("{}", num);
+                }
             } else {
-                let num = tokens.expect_integer().unwrap();
+                let (r_idx, d_idx) = tokens.expect_data().unwrap();
+                let num = {
+                    let mut int = 0;
+                    let index = d_idx - 1 + registers[r_idx] as usize;
+                    for i in 0..4 {
+                        int |= (data[index+i] as i32) << ((4-1-i) * 8);
+                    }
+                    int
+                };
                 print!("{}", num);
             }
             std::io::stdout().flush().unwrap();

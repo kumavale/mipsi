@@ -1,4 +1,4 @@
-use std::io::{Write};
+use std::io::{stdin, stdout, Write};
 
 use super::token::Tokens;
 use super::lexer::tokenize;
@@ -6,8 +6,6 @@ use super::parser::{parse, display::*};
 
 pub fn run() {
     let mut tokens: Tokens = Tokens::new();
-    //tokens.push(TokenKind::EOL, 0);
-
     let mut number_of_lines: u32 = 1;
 
     let mut registers: [i32; 32] = [0; 32];
@@ -21,12 +19,12 @@ pub fn run() {
 
     loop {
         print!("> ");
-        std::io::stdout().flush().unwrap();
+        let _ = stdout().flush();
 
         let input = {
-           let mut s = String::new();
-           std::io::stdin().read_line(&mut s).unwrap();
-           s.trim_start().trim_end().to_owned()
+            let mut s = String::new();
+            stdin().read_line(&mut s).unwrap();
+            s.trim_start().trim_end().to_owned()
         };
 
         match &*input {
@@ -39,12 +37,21 @@ pub fn run() {
             _ => (),
         }
 
+        let old_tokens_len = tokens.len();
         tokenize(number_of_lines, &input, &mut tokens);
         number_of_lines += 1;
 
         if 0 < tokens.len() {
-            parse(&mut tokens, &mut registers, &mut hi, &mut lo,
+            let result = parse(&mut tokens, &mut registers, &mut hi, &mut lo,
                 &mut data, &mut stack);
+            if let Err(e) = result {
+                eprintln!("{}", e);
+                // rollback
+                let rollback_len = tokens.len() - old_tokens_len;
+                for _ in 0..rollback_len {
+                    tokens.pop();
+                }
+            }
         }
 
         println!();

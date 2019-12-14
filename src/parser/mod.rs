@@ -12,7 +12,7 @@ use crate::parser::eval::*;
 pub fn parse(mut tokens: &mut Tokens,
     mut registers: &mut [i32], mut hi: &mut u32, mut lo: &mut u32,
     mut data: &mut Vec<u8>, mut stack: &mut Vec<u8>)
-{
+-> Result<(), String> {
 
     data_analysis(&mut tokens, &mut data);
     //println!("data: {:?}", data);
@@ -42,7 +42,7 @@ pub fn parse(mut tokens: &mut Tokens,
         }
         if tokens.expect_eol().is_ok() { continue; }
 
-        let instruction_kind = tokens.expect_instruction().unwrap();
+        let instruction_kind = tokens.expect_instruction()?;
 
         match instruction_kind {
             // Arithmetic, Logic
@@ -104,10 +104,10 @@ pub fn parse(mut tokens: &mut Tokens,
                 }),
             InstructionKind::ROR => {
                 tokens.consume().unwrap();
-                let rd_idx = tokens.expect_register().unwrap();
+                let rd_idx = tokens.expect_register()?;
                 registers[rd_idx] = {
                     tokens.consume().unwrap();
-                    let rs_idx = tokens.expect_register().unwrap();
+                    let rs_idx = tokens.expect_register()?;
                     let rs = registers[rs_idx];
                     tokens.consume().unwrap();
                     let rt = {
@@ -116,7 +116,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         } else if let Ok(num) = tokens.expect_integer() {
                             num
                         } else {
-                            panic!("ROR: invalid token");
+                            return Err("ROR: invalid token".into());
                         }
                     };
                     registers[1] = (rs as u32 >> rt) as i32;
@@ -126,10 +126,10 @@ pub fn parse(mut tokens: &mut Tokens,
             },
             InstructionKind::ROL => {
                 tokens.consume().unwrap();
-                let rd_idx = tokens.expect_register().unwrap();
+                let rd_idx = tokens.expect_register()?;
                 registers[rd_idx] = {
                     tokens.consume().unwrap();
-                    let rs_idx = tokens.expect_register().unwrap();
+                    let rs_idx = tokens.expect_register()?;
                     let rs = registers[rs_idx];
                     tokens.consume().unwrap();
                     let rt = {
@@ -138,7 +138,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         } else if let Ok(num) = tokens.expect_integer() {
                             num
                         } else {
-                            panic!("ROL: invalid token");
+                            return Err("ROL: invalid token".into());
                         }
                     };
                     registers[1] = rs << rt;
@@ -151,10 +151,10 @@ pub fn parse(mut tokens: &mut Tokens,
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| !(x | y)),
             InstructionKind::NOT => {
                 tokens.consume().unwrap();
-                let rd_idx = tokens.expect_register().unwrap();
+                let rd_idx = tokens.expect_register()?;
                 registers[rd_idx] = {
                     tokens.consume().unwrap();
-                    let register_idx = tokens.expect_register().unwrap();
+                    let register_idx = tokens.expect_register()?;
                     !registers[register_idx]
                 };
             },
@@ -244,9 +244,9 @@ pub fn parse(mut tokens: &mut Tokens,
             // Load
             InstructionKind::LA => {
                 tokens.consume().unwrap();
-                let register_idx = tokens.expect_register().unwrap();
+                let register_idx = tokens.expect_register()?;
                 tokens.consume().unwrap();
-                let label_idx = tokens.expect_address().unwrap() as i32;
+                let label_idx = tokens.expect_address()? as i32;
                 registers[register_idx] = label_idx;
             },
             InstructionKind::LB =>  // Rt = *((int*)address) (8bit)
@@ -259,7 +259,7 @@ pub fn parse(mut tokens: &mut Tokens,
             // Store
             InstructionKind::SW => {  // *((int*)address) = Rt (32bit)
                 tokens.consume().unwrap();
-                let register_idx = tokens.expect_register().unwrap();
+                let register_idx = tokens.expect_register()?;
                 tokens.consume().unwrap();
                 if let Ok((r_idx, s_idx)) = tokens.expect_stack() {
                     let stack_idx = -(registers[r_idx] + s_idx) as usize;
@@ -271,7 +271,7 @@ pub fn parse(mut tokens: &mut Tokens,
                     stack[stack_idx-1] = (registers[register_idx]>> 8) as u8;
                     stack[stack_idx]   = (registers[register_idx]    ) as u8;
                 } else {
-                    let (r_idx, d_idx) = tokens.expect_data().unwrap();
+                    let (r_idx, d_idx) = tokens.expect_data()?;
                     let index = registers[r_idx] as usize + d_idx - 1;
                     data[index]   = (registers[register_idx]>>24) as u8;
                     data[index+1] = (registers[register_idx]>>16) as u8;
@@ -283,10 +283,10 @@ pub fn parse(mut tokens: &mut Tokens,
             // Transfer
             InstructionKind::MOVE => {
                 tokens.consume().unwrap();
-                let register_idx = tokens.expect_register().unwrap();
+                let register_idx = tokens.expect_register()?;
                 registers[register_idx] = {
                     let r1_idx = if tokens.consume().is_some() {
-                        tokens.expect_register().unwrap()
+                        tokens.expect_register()?
                     } else {
                         // TODO
                         //todo!();
@@ -373,7 +373,7 @@ pub fn parse(mut tokens: &mut Tokens,
 
         // expect TokenKind::EOL
         tokens.consume();
-        tokens.expect_eol().unwrap();
+        tokens.expect_eol()?;
 
         if std::env::var("DATA_TRACE").is_ok() {
             display_data_per_4byte(&data);
@@ -389,6 +389,7 @@ pub fn parse(mut tokens: &mut Tokens,
     //display_data_per_4byte(&data);
     //display_stack(&stack);
     //display_register(&registers);
+    Ok(())
 }
 
 /// Return signed integer (32-bit)
@@ -472,44 +473,79 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
     while tokens.consume().is_some() {
 
         // Ignore except .data|.align segment
-        match tokens.token[tokens.idx()].kind {
-            TokenKind::INDICATE(IndicateKind::data) | _ if tokens.data_area_now => {
+        if tokens.data_area_now || match tokens.token[tokens.idx()].kind {
+            TokenKind::INDICATE(IndicateKind::data) =>
+                true,
+            TokenKind::INDICATE(IndicateKind::align(n)) => {
+                let padding = 2i32.pow(n as u32) as usize;
+                let i = data.len() % padding;
+                for _ in 0..i {
+                    data.push(0);
+                }
+                false
+            },
+            _ => false,
+        } {
 
-                tokens.data_area_now = true;
+            tokens.data_area_now = true;
 
-                // consume EOL
-                while let Some(token) = tokens.next() {
-                    if token.kind == TokenKind::EOL {
+            // consume EOL
+            while let Some(token) = tokens.next() {
+                if token.kind == TokenKind::EOL {
+                    tokens.consume().unwrap();
+                } else {
+                    break;
+                }
+            }
+
+            // until .text segment
+            while tokens.consume().is_some() {
+                if TokenKind::INDICATE(IndicateKind::text) == *tokens.kind() {
+                    tokens.data_area_now = false;
+                    break;
+                }
+
+                // TokenKind::LABEL(usize) = data.len() + 1
+                if let TokenKind::LABEL(_, _, ref mut index) = &mut tokens.kind() {
+                    *index = Some(data.len() + 1);
+                    if tokens.next().unwrap().kind == TokenKind::EOL {
                         tokens.consume().unwrap();
-                    } else {
-                        break;
                     }
                 }
 
-                // until .text segment
-                while tokens.consume().is_some() {
-                    if TokenKind::INDICATE(IndicateKind::text) == *tokens.kind() {
-                        tokens.data_area_now = false;
+                match &*tokens.kind() {
+                    // Align 2^n
+                    TokenKind::INDICATE(IndicateKind::align(n)) => {
+                        let padding = 2i32.pow(*n as u32) as usize;
+                        let i = data.len() % padding;
+                        for _ in 0..i {
+                            data.push(0);
+                        }
+                    },
+                    TokenKind::INDICATE(IndicateKind::word(w)) => {
+                        data.push((*w>>24) as u8);
+                        data.push((*w>>16) as u8);
+                        data.push((*w>> 8) as u8);
+                        data.push( *w      as u8);
+                    },
+                    TokenKind::INDICATE(IndicateKind::half(h)) => {
+                        data.push((*h>> 8) as u8);
+                        data.push( *h      as u8);
+                    },
+                    TokenKind::INDICATE(IndicateKind::byte(b)) => {
+                        data.push(*b);
+                    },
+                    _ => (),
+                }
+
+                // until EOL
+                while let Some(token) = tokens.consume() {
+                    if token.kind == TokenKind::EOL {
                         break;
                     }
 
-                    // TokenKind::LABEL(usize) = data.len() + 1
-                    if let TokenKind::LABEL(_, _, ref mut index) = &mut tokens.kind() {
-                        *index = Some(data.len() + 1);
-                        if tokens.next().unwrap().kind == TokenKind::EOL {
-                            tokens.consume().unwrap();
-                        }
-                    }
-
-                    match &*tokens.kind() {
-                        // Align 2^n
-                        TokenKind::INDICATE(IndicateKind::align(n)) => {
-                            let padding = 2i32.pow(*n as u32) as usize;
-                            let i = data.len() % padding;
-                            for _ in 0..i {
-                                data.push(0);
-                            }
-                        },
+                    match tokens.kind() {
+                        // Big Endian
                         TokenKind::INDICATE(IndicateKind::word(w)) => {
                             data.push((*w>>24) as u8);
                             data.push((*w>>16) as u8);
@@ -523,59 +559,26 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                         TokenKind::INDICATE(IndicateKind::byte(b)) => {
                             data.push(*b);
                         },
+                        TokenKind::INDICATE(IndicateKind::space(s)) => {
+                            for _ in 0..*s {
+                                data.push(0);
+                            }
+                        },
+                        TokenKind::INDICATE(IndicateKind::ascii(s)) => {
+                            for ch in s.bytes() {
+                                data.push(ch);
+                            }
+                        },
+                        TokenKind::INDICATE(IndicateKind::asciiz(s)) => {
+                            for ch in s.bytes() {
+                                data.push(ch);
+                            }
+                            data.push(0);
+                        },
                         _ => (),
                     }
-
-                    // until EOL
-                    while let Some(token) = tokens.consume() {
-                        if token.kind == TokenKind::EOL {
-                            break;
-                        }
-
-                        match tokens.kind() {
-                            // Big Endian
-                            TokenKind::INDICATE(IndicateKind::word(w)) => {
-                                data.push((*w>>24) as u8);
-                                data.push((*w>>16) as u8);
-                                data.push((*w>> 8) as u8);
-                                data.push( *w      as u8);
-                            },
-                            TokenKind::INDICATE(IndicateKind::half(h)) => {
-                                data.push((*h>> 8) as u8);
-                                data.push( *h      as u8);
-                            },
-                            TokenKind::INDICATE(IndicateKind::byte(b)) => {
-                                data.push(*b);
-                            },
-                            TokenKind::INDICATE(IndicateKind::space(s)) => {
-                                for _ in 0..*s {
-                                    data.push(0);
-                                }
-                            },
-                            TokenKind::INDICATE(IndicateKind::ascii(s)) => {
-                                for ch in s.bytes() {
-                                    data.push(ch);
-                                }
-                            },
-                            TokenKind::INDICATE(IndicateKind::asciiz(s)) => {
-                                for ch in s.bytes() {
-                                    data.push(ch);
-                                }
-                                data.push(0);
-                            },
-                            _ => (),
-                        }
-                    }
                 }
-            },
-            TokenKind::INDICATE(IndicateKind::align(n)) => {
-                let padding = 2i32.pow(n as u32) as usize;
-                let i = data.len() % padding;
-                for _ in 0..i {
-                    data.push(0);
-                }
-            },
-            _ => (),
+            }
         }
     }
 
@@ -657,6 +660,7 @@ fn test_parse() {
     let mut data:  Vec<u8> = Vec::new();
     let mut stack: Vec<u8> = vec![0];
 
-    parse(&mut tokens, &mut registers, &mut hi, &mut lo, &mut data, &mut stack);
+    parse(&mut tokens, &mut registers, &mut hi, &mut lo, &mut data, &mut stack)
+        .unwrap();
 }
 

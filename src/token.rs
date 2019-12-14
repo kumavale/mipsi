@@ -197,6 +197,22 @@ impl Tokens {
         self.token.push(Token { kind, line });
     }
 
+    pub fn pop(&mut self) -> Option<Token> {
+        if 0 < self.length {
+            self.length -= 1;
+            if self.length == 0 {
+                self.idx = 0;
+                self.foremost = true;
+            }
+            if self.idx > self.length {
+                self.idx = self.length - 1;
+            }
+            self.token.pop()
+        } else {
+            None
+        }
+    }
+
     #[allow(dead_code)]
     pub fn reset(&mut self) {
         self.foremost = true;
@@ -269,14 +285,15 @@ impl Tokens {
     /// Get data index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
     pub fn expect_address(&self) -> Result<usize, String> {
         if let TokenKind::ADDRESS(s) = self.token[self.idx].kind.clone() {
+            let line = self.token[self.idx].line;
             for t in &self.token {
                 if let TokenKind::LABEL(name, _, idx) = &t.kind {
                     if *s == *name {
-                        return Ok((*idx).unwrap());
+                        return Ok((*idx)
+                            .ok_or_else(|| format!("{}: invalid address: {}", line, s))?);
                     }
                 }
             }
-            let line = self.token[self.idx].line;
             Err(format!("{}: invalid address: {}", line, s))
         } else {
             let t = self.token[self.idx].clone();

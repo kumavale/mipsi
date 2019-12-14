@@ -36,7 +36,8 @@ fn main() {
         let mut stack: Vec<u8> = vec![0];
 
         parser::parse(&mut tokens, &mut registers, &mut hi, &mut lo,
-            &mut data, &mut stack);
+            &mut data, &mut stack)
+            .unwrap();
     }
 }
 

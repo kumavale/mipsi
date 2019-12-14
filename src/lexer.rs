@@ -478,8 +478,6 @@ pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
                         TokenKind::LABEL(identifier, tokens.len(), None)
                     } else if is_indicate(&word) {
                         match *word {
-                            // TODO
-                            // unwrap() => TokenKind::INVALID()
                             ".text" =>  TokenKind::INDICATE(IndicateKind::text),
                             ".data" =>  TokenKind::INDICATE(IndicateKind::data),
                             ".globl" => {
