@@ -148,6 +148,100 @@ fn is_hexadecimal(word: &str) -> Option<i32> {
     }
 }
 
+fn indicate_word(tokens: &mut Tokens, number_of_lines: u32, words: std::slice::Iter<&str>) {
+    for word in words {
+        let split: Vec<&str> = word.split(':').collect();
+        if split.len() == 2 {
+            for _ in 0..split[1].parse::<usize>().unwrap() {
+                let num = {
+                    if let Ok(num) = split[0].parse::<i32>() {
+                        num as u32
+                    } else {
+                        split[0].parse::<u32>().unwrap()
+                    }
+                };
+                tokens.push(TokenKind::INDICATE(IndicateKind::word(num)), number_of_lines);
+            }
+        } else if !is_comment(&word) {
+            let num = {
+                if let Ok(num) = split[0].parse::<i32>() {
+                    num as u32
+                } else {
+                    split[0].parse::<u32>().unwrap()
+                }
+            };
+            tokens.push(TokenKind::INDICATE(IndicateKind::word(num)), number_of_lines);
+        } else {
+            break;
+        }
+    };
+}
+
+fn indicate_half(tokens: &mut Tokens, number_of_lines: u32, words: std::slice::Iter<&str>) {
+    for word in words {
+        let split: Vec<&str> = word.split(':').collect();
+        if split.len() == 2 {
+            for _ in 0..split[1].parse::<usize>().unwrap() {
+                let half = {
+                    if let Ok(num) = split[0].parse::<i16>() {
+                        num as u16
+                    } else {
+                        split[0].parse::<u16>().unwrap()
+                    }
+                };
+                tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
+            }
+        } else if !is_comment(&word) {
+            let half = {
+                if let Ok(num) = split[0].parse::<i16>() {
+                    num as u16
+                } else {
+                    split[0].parse::<u16>().unwrap()
+                }
+            };
+            tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
+        } else {
+            break;
+        }
+    };
+}
+
+fn indicate_byte(tokens: &mut Tokens, number_of_lines: u32, words: std::slice::Iter<&str>) {
+    let mut byte = 0;
+    for word in words {
+        let split: Vec<&str> = word.split(':').collect();
+        if split.len() == 2 {
+            for _ in 0..split[1].parse::<usize>().unwrap() {
+                byte = {
+                    if let Ok(num) = split[0].parse::<i8>() {
+                        num as u8
+                    } else {
+                        split[0].parse::<u8>().unwrap()
+                    }
+                };
+                tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
+            }
+        } else if word.starts_with(':') {
+            let mut word = word.to_string();
+            word.remove(0);
+            for _ in 1..word.parse::<usize>().unwrap() {
+                tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
+            }
+        } else if !is_comment(&word) {
+            byte = {
+                if let Ok(num) = split[0].parse::<i8>() {
+                    num as u8
+                } else {
+                    split[0].parse::<u8>().unwrap()
+                }
+            };
+            tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
+        } else {
+            break;
+        }
+    };
+}
+
 fn split_words(line: &str) -> Vec<String> {
     let mut words: Vec<String> = Vec::new();
     let mut line_iter = line.chars();
@@ -161,8 +255,7 @@ fn split_words(line: &str) -> Vec<String> {
 
         // string for .asciiz | literal
         if ch == '"' {
-            //let mut asciiz = String::new();
-            let mut asciiz = format!("\"");
+            let mut asciiz = "\"".to_string();
             while let Some(mut ch2) = line_iter.next() {
                 if ch2 != '"' {
                     if ch2 == '\\' {
@@ -239,7 +332,7 @@ fn split_words(line: &str) -> Vec<String> {
 }
 
 /// Recieve 1 line
-pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
+pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
     let words: Vec<String> = split_words(&line);
     let words: Vec<&str>   = words.iter().map(|s| &**s).collect();
 
@@ -311,9 +404,11 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "ORI"     => TokenKind::INSTRUCTION(InstructionKind::ORI),
                 "XOR"     => TokenKind::INSTRUCTION(InstructionKind::XOR),
                 "XORI"    => TokenKind::INSTRUCTION(InstructionKind::XORI),
+
                 // Constant
                 "LI"      => TokenKind::INSTRUCTION(InstructionKind::LI),
                 "LUI"     => TokenKind::INSTRUCTION(InstructionKind::LUI),
+
                 // Comparison
                 "SLTU" |
                 "SLT"     => TokenKind::INSTRUCTION(InstructionKind::SLT),
@@ -327,6 +422,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "SLEU" |
                 "SLE"     => TokenKind::INSTRUCTION(InstructionKind::SLE),
                 "SNE"     => TokenKind::INSTRUCTION(InstructionKind::SNE),
+
                 // Branch
                 "B"       => TokenKind::INSTRUCTION(InstructionKind::B),
                 "BEQ"     => TokenKind::INSTRUCTION(InstructionKind::BEQ),
@@ -345,22 +441,27 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "BLEZ"    => TokenKind::INSTRUCTION(InstructionKind::BLEZ),
                 "BLTZ"    => TokenKind::INSTRUCTION(InstructionKind::BLTZ),
                 "BNEZ"    => TokenKind::INSTRUCTION(InstructionKind::BNEZ),
+
                 // Jump
                 "J"       => TokenKind::INSTRUCTION(InstructionKind::J),
                 "JAL"     => TokenKind::INSTRUCTION(InstructionKind::JAL),
                 "JR"      => TokenKind::INSTRUCTION(InstructionKind::JR),
                 "JALR"    => TokenKind::INSTRUCTION(InstructionKind::JALR),
+
                 // Load, Store
                 "LA"      => TokenKind::INSTRUCTION(InstructionKind::LA),
                 "LB"      => TokenKind::INSTRUCTION(InstructionKind::LB),
                 "LH"      => TokenKind::INSTRUCTION(InstructionKind::LH),
                 "LW"      => TokenKind::INSTRUCTION(InstructionKind::LW),
                 "SW"      => TokenKind::INSTRUCTION(InstructionKind::SW),
+
                 // Transfer
                 "MOVE"    => TokenKind::INSTRUCTION(InstructionKind::MOVE),
+
                 // Exception, Interrupt
                 "SYSCALL" => TokenKind::INSTRUCTION(InstructionKind::SYSCALL),
                 "NOP"     => TokenKind::INSTRUCTION(InstructionKind::NOP),
+
                 // My own
                 "PRTN"    => TokenKind::INSTRUCTION(InstructionKind::PRTN),
                 "PRTI"    => TokenKind::INSTRUCTION(InstructionKind::PRTI),
@@ -368,6 +469,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                 "PRTX"    => TokenKind::INSTRUCTION(InstructionKind::PRTX),
                 "PRTC"    => TokenKind::INSTRUCTION(InstructionKind::PRTC),
                 "PRTS"    => TokenKind::INSTRUCTION(InstructionKind::PRTS),
+
                 _ =>
                     if is_label(&word) {
                         let mut identifier = word.to_string();
@@ -384,61 +486,15 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                                 TokenKind::INDICATE(IndicateKind::globl(label))
                             },
                             ".word" => {
-                                while let Some(word) = words.next() {
-                                    let split: Vec<&str> = word.split(':').collect();
-                                    if split.len() == 2 {
-                                        for _ in 0..split[1].parse::<u32>().unwrap() {
-                                            let num = split[0].parse::<u32>().unwrap();
-                                            tokens.push(TokenKind::INDICATE(IndicateKind::word(num)), number_of_lines);
-                                        }
-                                    } else if !is_comment(&word) {
-                                        let num = word.parse::<u32>().unwrap();
-                                        tokens.push(TokenKind::INDICATE(IndicateKind::word(num)), number_of_lines);
-                                    } else {
-                                        break;
-                                    }
-                                };
+                                indicate_word(&mut tokens, number_of_lines, words);
                                 break;
                             },
                             ".half" => {
-                                while let Some(word) = words.next() {
-                                    let split: Vec<&str> = word.split(':').collect();
-                                    if split.len() == 2 {
-                                        for _ in 0..split[1].parse::<u16>().unwrap() {
-                                            let half = split[0].parse::<u16>().unwrap();
-                                            tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
-                                        }
-                                    } else if !is_comment(&word) {
-                                        let half = word.parse::<u16>().unwrap();
-                                        tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
-                                    } else {
-                                        break;
-                                    }
-                                };
+                                indicate_half(&mut tokens, number_of_lines, words);
                                 break;
                             },
                             ".byte" => {
-                                let mut byte = 0;
-                                while let Some(word) = words.next() {
-                                    let split: Vec<&str> = word.split(':').collect();
-                                    if split.len() == 2 {
-                                        for _ in 0..split[1].parse::<u8>().unwrap() {
-                                            let byte = split[0].parse::<u8>().unwrap();
-                                            tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
-                                        }
-                                    } else if word.starts_with(':') {
-                                        let mut word = word.to_string();
-                                        word.remove(0);
-                                        for _ in 1..word.parse::<u8>().unwrap() {
-                                            tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
-                                        }
-                                    } else if !is_comment(&word) {
-                                        byte = word.parse::<u8>().unwrap();
-                                        tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
-                                    } else {
-                                        break;
-                                    }
-                                };
+                                indicate_byte(&mut tokens, number_of_lines, words);
                                 break;
                             },
                             ".space" => {
@@ -463,16 +519,14 @@ pub fn tokenize(number_of_lines: u32, line: &str, tokens: &mut Tokens) {
                             },
                             _ => TokenKind::INVALID(format!("invalid indicate: {}", word))
                         }
+                    } else  if word.starts_with('"')  && word.ends_with('"') ||
+                               word.starts_with('\'') && word.ends_with('\'') {
+                        let mut word = word.to_string();
+                        word.remove(0);
+                        word.remove(word.len()-1);
+                        TokenKind::LITERAL(word)
                     } else {
-                        if word.starts_with('"')  && word.ends_with('"') ||
-                           word.starts_with('\'') && word.ends_with('\'') {
-                            let mut word = word.to_string();
-                            word.remove(0);
-                            word.remove(word.len()-1);
-                            TokenKind::LITERAL(word)
-                        } else {
-                            TokenKind::ADDRESS(word.to_string())
-                        }
+                        TokenKind::ADDRESS(word.to_string())
                     }
             };
 
@@ -491,6 +545,11 @@ fn test_tokenize() {
 
     let input = "\
 # This is comment.
+
+\n
+\t
+\r
+  
 main:
     ADDI    $0,     $31,    256
     add	$t1,	$t2,	$t3
@@ -514,11 +573,13 @@ main:
     BGE BGT BLE BLT BGEU BGTU BLEU BLTU
     BEQZ BGEZ BGTZ BLEZ BLTZ BNEZ
     SLT SLTU SLTI SLTIU SEQ SGE SGEU SGT SGTU SLE SLEU SNE
-    REM
+    REM REMU
     .text .data .globl main
 w:  .word 42, 0, 1, 2, 3
+h:  .half 3, 2, 1, 0, 42
 b:  .byte 'a', 'i', 'u', 'e', 'o'
-s:  .asciiz \"string\"
+s:  .ascii \"string\"
+z:  .asciiz \"stringz\"
 n:  .space 256
     NOR NOT
     SLL SLLV SRA SRAV SRL SRLV
@@ -526,19 +587,25 @@ n:  .space 256
     .ascii \"string\"
     .align 2
 
-# Hello, World!
-.data ## Data declaration section
-## String to be printed:
-out_string: .asciiz \"Hello, World!\\n\"
-.text ## Assembly language instructions go in text segment
-main: ## Start of code section
-    li $v0, 4           # system call code for printing string = 4
-    la $a0, out_string  # load address of string to be printed into $a0
-    syscall             # call operating system to perform operation
-                        # specified in $v0
-                        # syscall takes its arguments from $a0, $a1, ...
-    li $v0, 10          # terminate program
-    syscall
+\t\r\"literal\"\n
+\"\tstr\\n\"
+'C' 'h' 'a' 'r'
+'\\n','\\r','\\t','\\0'
+'\\'' '\\\"'
+
+NEG NEGU SW REMU MULO MULOU
+CLO CLZ ROR ROL
+DIV DIVU MULT MULTU MADD MADDU MSUB MSUBU
+PRTN PRTI PRTH PRTX PRTC PRTS
+
+.word 0:0
+.word 1:1
+.half 2:2
+.byte 4:4
+
+.word  -2147483648, -1, 0, 1, 2147483647, 4294967295
+.half  -32768, -1, 0, 1, 32767, 65535
+.byte  -128, -1, -0, 0, 1, 127, 255
 ";
 
     let mut tokens: Tokens = Tokens::new();
@@ -548,6 +615,16 @@ main: ## Start of code section
         tokenize(0, &buf, &mut tokens);
         buf.clear();
     }
+
+    // `cargo test -- --nocapture`
+    while let Some(token) = tokens.consume() {
+        print!("{:?}", token);
+        std::io::stdout().flush().unwrap();
+        if token.kind == TokenKind::EOL {
+            println!();
+        }
+    }
+    tokens.reset();
 
     assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 0, None));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
@@ -656,29 +733,40 @@ main: ## Start of code section
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SNE));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::REM));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::REMU));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::text));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::globl("main".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("w".to_string(), 112, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("w".to_string(), 113, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(42)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(0)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(1)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(2)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(3)));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("b".to_string(), 119, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("h".to_string(), 120, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(3)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(2)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(1)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(0)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(42)));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("b".to_string(), 127, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(97)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(105)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(117)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(101)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(111)));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("s".to_string(), 126, None));
-    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("string".to_string())));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("s".to_string(), 134, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::ascii("string".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("n".to_string(), 129, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("z".to_string(), 137, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("stringz".to_string())));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("n".to_string(), 140, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::space(256)));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::NOR));
@@ -699,16 +787,124 @@ main: ## Start of code section
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::align(2)));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::LITERAL("literal".to_string()));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::LITERAL("\tstr\n".to_string()));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(67));
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(104));
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(97));
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(114));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(10));
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(13));
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(9));
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(0));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(39));
+    assert_eq!(tokens.consume_kind(), TokenKind::INTEGER(34));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::NEG));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::NEGU));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SW));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::REMU));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::MULO));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::MULOU));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::CLO));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::CLZ));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ROR));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::ROL));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::DIV));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::DIVU));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::MULT));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::MULTU));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::MADD));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::MADDU));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::MSUB));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::MSUBU));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::PRTN));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::PRTI));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::PRTH));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::PRTX));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::PRTC));
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::PRTS));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(1)));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(2)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(2)));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(4)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(4)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(4)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(4)));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(2147483648)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(4294967295)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(0)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(1)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(2147483647)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(4294967295)));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(32768)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(65535)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(0)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(1)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(32767)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(65535)));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(128)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(255)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(0)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(0)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(1)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(127)));
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(255)));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+}
+
+#[test]
+#[cfg(test)]
+fn test_tokenize_hello_world() {
+    use std::io::{BufRead, BufReader};
+
+    let input = "\
+# Hello, World!\n
+.data ## Data declaration section\n
+## String to be printed:\n
+out_string: .asciiz \"Hello, World!\\n\"\n
+.text ## Assembly language instructions go in text segment\n
+main: ## Start of code section\n
+    li $v0, 4           # system call code for printing string = 4\n
+    la $a0, out_string  # load address of string to be printed into $a0\n
+    syscall             # call operating system to perform operation\n
+                        # specified in $v0\n
+                        # syscall takes its arguments from $a0, $a1, ...\n
+    li $v0, 10          # terminate program\n
+    syscall\n
+";
+
+    let mut tokens: Tokens = Tokens::new();
+    let mut buf = String::new();
+    let mut reader = BufReader::new(input.as_bytes());
+    while reader.read_line(&mut buf).unwrap() > 0 {
+        tokenize(0, &buf, &mut tokens);
+        buf.clear();
+    }
 
     // Hello World
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("out_string".to_string(), 152, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("out_string".to_string(), 2, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("Hello, World!\n".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::text));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 157, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("main".to_string(), 7, None));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::LI));
     assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::v0, 2));
@@ -726,16 +922,6 @@ main: ## Start of code section
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::SYSCALL));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-
-    // `cargo test -- --nocapture`
-    tokens.reset();
-    while let Some(token) = tokens.consume() {
-        print!("{:?}", token);
-        std::io::stdout().flush().unwrap();
-        if token.kind == TokenKind::EOL {
-            println!();
-        }
-    }
 }
 
 #[cfg(test)]
