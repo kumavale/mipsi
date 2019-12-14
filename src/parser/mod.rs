@@ -2,7 +2,7 @@ use std::io::Write;
 
 use super::token::*;
 
-mod display;
+pub mod display;
 use crate::parser::display::*;
 mod eval;
 use crate::parser::eval::*;
@@ -359,8 +359,15 @@ pub fn parse(mut tokens: &mut Tokens,
                 eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTC),
             InstructionKind::PRTS =>
                 eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTS),
-            //InstructionKind::DISPT =>
-            //    eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTS),
+            InstructionKind::RST => {
+                for r in registers { *r = 0; }
+                *hi = 0;
+                *lo = 0;
+                data.clear();
+                stack.clear();
+                tokens.init();
+                break;
+            },
             //_ => (),
         }
 

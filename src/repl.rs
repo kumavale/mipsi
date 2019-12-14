@@ -2,7 +2,7 @@ use std::io::{Write};
 
 use super::token::Tokens;
 use super::lexer::tokenize;
-use super::parser::parse;
+use super::parser::{parse, display::*};
 
 pub fn run() {
     let mut tokens: Tokens = Tokens::new();
@@ -26,11 +26,15 @@ pub fn run() {
         let input = {
            let mut s = String::new();
            std::io::stdin().read_line(&mut s).unwrap();
-           s.trim_end().to_owned()
+           s.trim_start().trim_end().to_owned()
         };
 
         match &*input {
-            "exit" => break,
+            "exit"  => break,
+            "DISPT"|"dispt" => { println!("{:?}", tokens.token); continue; }, // TODO provisional
+            "DISPD"|"dispd" => { display_data_per_4byte(&data);  continue; },
+            "DISPS"|"disps" => { display_stack(&stack);          continue; },
+            "DISPR"|"dispr" => { display_register(&registers);   continue; },
             "" => continue,
             _ => (),
         }

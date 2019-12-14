@@ -469,6 +469,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
                 "PRTX"    => TokenKind::INSTRUCTION(InstructionKind::PRTX),
                 "PRTC"    => TokenKind::INSTRUCTION(InstructionKind::PRTC),
                 "PRTS"    => TokenKind::INSTRUCTION(InstructionKind::PRTS),
+                "RST"     => TokenKind::INSTRUCTION(InstructionKind::RST),
 
                 _ =>
                     if is_label(&word) {
@@ -606,6 +607,8 @@ PRTN PRTI PRTH PRTX PRTC PRTS
 .word  -2147483648, -1, 0, 1, 2147483647, 4294967295
 .half  -32768, -1, 0, 1, 32767, 65535
 .byte  -128, -1, -0, 0, 1, 127, 255
+
+RST
 ";
 
     let mut tokens: Tokens = Tokens::new();
@@ -864,6 +867,8 @@ PRTN PRTI PRTH PRTX PRTC PRTS
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(1)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(127)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(255)));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::RST));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
 }
 
