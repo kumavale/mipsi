@@ -1,4 +1,8 @@
 pub mod method;
+pub mod register;
+
+use super::token::register::RegisterKind;
+
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum InstructionKind {
@@ -123,23 +127,6 @@ pub enum IndicateKind {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[allow(non_camel_case_types)]
-pub enum RegisterKind {
-    zero,                            //     0: Hard-wired to 0
-    at,                              //     1: Reserved for pseudo-instructions
-    v0, v1,                          //   2-3: Return values from functions
-    a0, a1, a2, a3,                  //   4-7: Arguments to functions - not preserved by subprograms
-    t0, t1, t2, t3, t4, t5, t6, t7,  //  8-15: Temporary data, not preserved by subprograms
-    s0, s1, s2, s3, s4, s5, s6, s7,  // 16-23: Saved registers, preserved by subprograms
-    t8, t9,                          // 24-25: More temporary registers, not preserved by subprograms
-    k0, k1,                          // 26-27: Reserved for kernel. Do not use.
-    gp,                              //    28: Global Area Pointer (base of global data segment)
-    sp,                              //    29: Stack Pointer
-    fp,                              //    30: Frame Pointer
-    ra,                              //    31: Return Address
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
     INSTRUCTION(InstructionKind),         // Instruction
     INDICATE(IndicateKind),               // Indication
@@ -162,12 +149,12 @@ pub struct Token {
 
 #[derive(Debug)]
 pub struct Tokens {
-    pub token: Vec<Token>,  // Token's vector
-    pub data_area_now: bool,
+    pub token: Vec<Token>,          // Token's vector
+    pub data_area_now: bool,        // for data_analysis() in REPL
 
-    idx: usize,             // Current index
-    foremost: bool,         // Foremost
-    length: usize,          // Token length
-    //addresses: Vec<(String, idx)> // (label name, token index)
+    idx: usize,                     // Current index
+    foremost: bool,                 // Foremost
+    length: usize,                  // Token length
+    addresses: Vec<(String, usize)> // (label name, token index)
 }
 

@@ -8,6 +8,7 @@ impl Tokens {
                  idx: 0,
                  foremost: true,
                  length: 0,
+                 addresses: Vec::new(),
         }
     }
 
@@ -42,6 +43,10 @@ impl Tokens {
         } else {
             None
         }
+    }
+
+    pub fn add_address(&mut self, label: String, token_index: usize) {
+        self.addresses.push((label, token_index));
     }
 
     #[allow(dead_code)]
@@ -135,11 +140,9 @@ impl Tokens {
     /// Get label index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
     pub fn expect_label(&self) -> Result<usize, String> {
         if let TokenKind::ADDRESS(s) = self.token[self.idx].kind.clone() {
-            for t in &self.token {
-                if let TokenKind::LABEL(name, idx, _) = &t.kind {
-                    if *s == *name {
-                        return Ok(*idx);
-                    }
+            for a in &self.addresses {
+                if *s == *a.0 {
+                    return Ok(a.1);
                 }
             }
             let line = self.token[self.idx].line;

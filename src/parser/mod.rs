@@ -342,7 +342,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         tokens.init();
                         break;
                     },
-                    _ => panic!("SYSCALL: invalid code: {}", registers[2]),
+                    _ => return Err(format!("SYSCALL: invalid code: {}", registers[2])),
                 }
             },
             InstructionKind::NOP => (),  // Do nothing

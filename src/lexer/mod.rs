@@ -1,6 +1,6 @@
 mod test;
 use super::token::*;
-
+use super::token::register::RegisterKind;
 
 /// Recieve 1 line
 pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
@@ -146,6 +146,7 @@ pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
                     if is_label(&word) {
                         let mut identifier = word.to_string();
                         identifier.remove(identifier.len()-1);  // Delete ':'
+                        tokens.add_address(identifier.clone(), tokens.len());
                         TokenKind::LABEL(identifier, tokens.len(), None)
                     } else if is_indicate(&word) {
                         match *word {
