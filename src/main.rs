@@ -40,6 +40,12 @@ fn main() {
         parser::parse(&mut tokens, &mut registers, &mut hi, &mut lo,
             &mut data, &mut stack)
             .unwrap();
+
+        // after moved
+        //println!("{:?}", tokens);
+        //parser::display::display_data_per_4byte(&data);
+        //parser::display::display_stack(&stack);
+        //parser::display::display_register(&registers);
     }
 }
 

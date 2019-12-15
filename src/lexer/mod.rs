@@ -296,11 +296,11 @@ fn is_data(word: &str) -> Result<(RegisterKind, usize, String), String> {
     let mut s_chars = s.chars();
 
     if let Some(c) = s_chars.next() {
-        if 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || c == '_' {
+        if let 'A'..='Z' | 'a'..='z' | '_' = c {
             let mut label = c.to_string();
 
             while let Some(c) = s_chars.next() {
-                if 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || c == '_' || '0' <= c && c <= '9' {
+                if let 'A'..='Z' | 'a'..='z' | '_' | '0'..='9' = c {
                     label = format!("{}{}", label, c);
                 } else if c == '(' {
                     let mut reg = String::new();
@@ -340,13 +340,9 @@ fn is_hexadecimal(word: &str) -> Option<i32> {
 
         for h in s.chars() {
             hex = match h {
-                '0'..='9' => (hex << 4) + (h as i32 - 48),
-                'a' | 'A' => (hex << 4) + 10,
-                'b' | 'B' => (hex << 4) + 11,
-                'c' | 'C' => (hex << 4) + 12,
-                'd' | 'D' => (hex << 4) + 13,
-                'e' | 'E' => (hex << 4) + 14,
-                'f' | 'F' => (hex << 4) + 15,
+                '0'..='9' => (hex << 4) + (h as u8 - b'0') as i32,
+                'a'..='f' => (hex << 4) + (h as u8 - b'a' + 10) as i32,
+                'A'..='F' => (hex << 4) + (h as u8 - b'A' + 10) as i32,
                 _ => return None,
             }
         }
@@ -363,20 +359,28 @@ fn indicate_word(tokens: &mut Tokens, number_of_lines: u32, words: std::slice::I
         if split.len() == 2 {
             for _ in 0..split[1].parse::<usize>().unwrap() {
                 let num = {
-                    if let Ok(num) = split[0].parse::<i32>() {
+                    if let Some(num) = is_hexadecimal(&split[0]) {
                         num as u32
                     } else {
-                        split[0].parse::<u32>().unwrap()
+                        if let Ok(num) = split[0].parse::<i32>() {
+                            num as u32
+                        } else {
+                            split[0].parse::<u32>().unwrap()
+                        }
                     }
                 };
                 tokens.push(TokenKind::INDICATE(IndicateKind::word(num)), number_of_lines);
             }
         } else if !is_comment(&word) {
             let num = {
-                if let Ok(num) = split[0].parse::<i32>() {
+                if let Some(num) = is_hexadecimal(&split[0]) {
                     num as u32
                 } else {
-                    split[0].parse::<u32>().unwrap()
+                    if let Ok(num) = split[0].parse::<i32>() {
+                        num as u32
+                    } else {
+                        split[0].parse::<u32>().unwrap()
+                    }
                 }
             };
             tokens.push(TokenKind::INDICATE(IndicateKind::word(num)), number_of_lines);
@@ -392,20 +396,28 @@ fn indicate_half(tokens: &mut Tokens, number_of_lines: u32, words: std::slice::I
         if split.len() == 2 {
             for _ in 0..split[1].parse::<usize>().unwrap() {
                 let half = {
-                    if let Ok(num) = split[0].parse::<i16>() {
+                    if let Some(num) = is_hexadecimal(&split[0]) {
                         num as u16
                     } else {
-                        split[0].parse::<u16>().unwrap()
+                        if let Ok(num) = split[0].parse::<i16>() {
+                            num as u16
+                        } else {
+                            split[0].parse::<u16>().unwrap()
+                        }
                     }
                 };
                 tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
             }
         } else if !is_comment(&word) {
             let half = {
-                if let Ok(num) = split[0].parse::<i16>() {
+                if let Some(num) = is_hexadecimal(&split[0]) {
                     num as u16
                 } else {
-                    split[0].parse::<u16>().unwrap()
+                    if let Ok(num) = split[0].parse::<i16>() {
+                        num as u16
+                    } else {
+                        split[0].parse::<u16>().unwrap()
+                    }
                 }
             };
             tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
@@ -422,10 +434,14 @@ fn indicate_byte(tokens: &mut Tokens, number_of_lines: u32, words: std::slice::I
         if split.len() == 2 {
             for _ in 0..split[1].parse::<usize>().unwrap() {
                 byte = {
-                    if let Ok(num) = split[0].parse::<i8>() {
+                    if let Some(num) = is_hexadecimal(&split[0]) {
                         num as u8
                     } else {
-                        split[0].parse::<u8>().unwrap()
+                        if let Ok(num) = split[0].parse::<i8>() {
+                            num as u8
+                        } else {
+                            split[0].parse::<u8>().unwrap()
+                        }
                     }
                 };
                 tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
@@ -438,10 +454,14 @@ fn indicate_byte(tokens: &mut Tokens, number_of_lines: u32, words: std::slice::I
             }
         } else if !is_comment(&word) {
             byte = {
-                if let Ok(num) = split[0].parse::<i8>() {
+                if let Some(num) = is_hexadecimal(&split[0]) {
                     num as u8
                 } else {
-                    split[0].parse::<u8>().unwrap()
+                    if let Ok(num) = split[0].parse::<i8>() {
+                        num as u8
+                    } else {
+                        split[0].parse::<u8>().unwrap()
+                    }
                 }
             };
             tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
