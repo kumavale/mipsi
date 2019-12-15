@@ -7,6 +7,7 @@ use crate::token::*;
 fn test_tokenize() {
     use std::io::{BufRead, BufReader, Write};
     use super::tokenize;
+    use crate::token::register::RegisterKind;
 
     let input = "\
 # This is comment.
@@ -342,6 +343,7 @@ RST
 fn test_tokenize_hello_world() {
     use std::io::{BufRead, BufReader};
     use super::tokenize;
+    use crate::token::register::RegisterKind;
 
     let input = "\
 # Hello, World!\n

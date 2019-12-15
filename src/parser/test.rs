@@ -3,6 +3,7 @@
 #[cfg(test)]
 fn test_parse() {
     use super::*;
+    use crate::token::register::RegisterKind;
 
     let mut tokens: Tokens = Tokens::new();
 

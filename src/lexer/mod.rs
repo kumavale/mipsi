@@ -26,8 +26,6 @@ pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
             tokens.push(TokenKind::STACK(k, i, a), number_of_lines);
         } else if let Ok((k, i, s)) = is_data(&word) {
             tokens.push(TokenKind::DATA(k, i, s), number_of_lines);
-        } else if is_comment(&word) {
-            break;
         } else {
             let token_kind = match &*word.to_ascii_uppercase() {
                 // Arithmetic, Logic
@@ -150,8 +148,16 @@ pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
                         TokenKind::LABEL(identifier, tokens.len(), None)
                     } else if is_indicate(&word) {
                         match *word {
-                            ".text" =>  TokenKind::INDICATE(IndicateKind::text),
-                            ".data" =>  TokenKind::INDICATE(IndicateKind::data),
+                            ".text" => {
+                                // ignore <Addr>
+                                let _ = words.next();
+                                TokenKind::INDICATE(IndicateKind::text)
+                            },
+                            ".data" => {
+                                // ignore <Addr>
+                                let _ = words.next();
+                                TokenKind::INDICATE(IndicateKind::data)
+                            },
                             ".globl" => {
                                 let label = words.next().unwrap().to_string();
                                 TokenKind::INDICATE(IndicateKind::globl(label))
@@ -327,10 +333,6 @@ fn is_indicate(word: &str) -> bool {
     word.starts_with('.')
 }
 
-fn is_comment(word: &str) -> bool {
-    word.starts_with('#')
-}
-
 fn is_hexadecimal(word: &str) -> Option<i32> {
     if word.starts_with("0x") {
         let mut hex: i32 = 0;
@@ -353,126 +355,129 @@ fn is_hexadecimal(word: &str) -> Option<i32> {
     }
 }
 
-fn indicate_word(tokens: &mut Tokens, number_of_lines: u32, words: std::slice::Iter<&str>) {
-    for word in words {
-        let split: Vec<&str> = word.split(':').collect();
-        if split.len() == 2 {
-            for _ in 0..split[1].parse::<usize>().unwrap() {
-                let num = {
-                    if let Some(num) = is_hexadecimal(&split[0]) {
+fn indicate_word(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slice::Iter<&str>) {
+    let mut int = 0;
+    while let Some(word) = words.next() {
+        if 1 < word.len() && word.ends_with(':') {
+            let mut word = word.to_string();
+            let word2 = words.next().unwrap();
+            word.pop().unwrap();
+            for _ in 0..word2.parse::<usize>().unwrap() {
+                int = {
+                    if let Some(num) = is_hexadecimal(&word) {
+                        num as u32
+                    } else if let Ok(num) = word.parse::<i32>() {
                         num as u32
                     } else {
-                        if let Ok(num) = split[0].parse::<i32>() {
-                            num as u32
-                        } else {
-                            split[0].parse::<u32>().unwrap()
-                        }
+                        word.parse::<u32>().unwrap()
                     }
                 };
-                tokens.push(TokenKind::INDICATE(IndicateKind::word(num)), number_of_lines);
+                tokens.push(TokenKind::INDICATE(IndicateKind::word(int)), number_of_lines);
             }
-        } else if !is_comment(&word) {
-            let num = {
-                if let Some(num) = is_hexadecimal(&split[0]) {
+        } else if &word[..] == ":" {
+            let word = words.next().unwrap();
+            for _ in 1..word.parse::<usize>().unwrap() {
+                tokens.push(TokenKind::INDICATE(IndicateKind::word(int)), number_of_lines);
+            }
+
+        } else {
+            int = {
+                if let Some(num) = is_hexadecimal(&word) {
+                    num as u32
+                } else if let Ok(num) = word.parse::<i32>() {
                     num as u32
                 } else {
-                    if let Ok(num) = split[0].parse::<i32>() {
-                        num as u32
-                    } else {
-                        split[0].parse::<u32>().unwrap()
-                    }
+                    word.parse::<u32>().unwrap()
                 }
             };
-            tokens.push(TokenKind::INDICATE(IndicateKind::word(num)), number_of_lines);
-        } else {
-            break;
+            tokens.push(TokenKind::INDICATE(IndicateKind::word(int)), number_of_lines);
         }
     };
 }
 
-fn indicate_half(tokens: &mut Tokens, number_of_lines: u32, words: std::slice::Iter<&str>) {
-    for word in words {
-        let split: Vec<&str> = word.split(':').collect();
-        if split.len() == 2 {
-            for _ in 0..split[1].parse::<usize>().unwrap() {
+fn indicate_half(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slice::Iter<&str>) {
+    let mut half = 0;
+    while let Some(word) = words.next() {
+        if 1 < word.len() && word.ends_with(':') {
+            let mut word = word.to_string();
+            let word2 = words.next().unwrap();
+            word.pop().unwrap();
+            for _ in 0..word2.parse::<usize>().unwrap() {
                 let half = {
-                    if let Some(num) = is_hexadecimal(&split[0]) {
+                    if let Some(num) = is_hexadecimal(&word) {
+                        num as u16
+                    } else if let Ok(num) = word.parse::<i16>() {
                         num as u16
                     } else {
-                        if let Ok(num) = split[0].parse::<i16>() {
-                            num as u16
-                        } else {
-                            split[0].parse::<u16>().unwrap()
-                        }
+                        word.parse::<u16>().unwrap()
                     }
                 };
                 tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
             }
-        } else if !is_comment(&word) {
-            let half = {
-                if let Some(num) = is_hexadecimal(&split[0]) {
+        } else if &word[..] == ":" {
+            let word = words.next().unwrap();
+            for _ in 1..word.parse::<usize>().unwrap() {
+                tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
+            }
+
+        } else {
+            half = {
+                if let Some(num) = is_hexadecimal(&word) {
+                    num as u16
+                } else if let Ok(num) = word.parse::<i16>() {
                     num as u16
                 } else {
-                    if let Ok(num) = split[0].parse::<i16>() {
-                        num as u16
-                    } else {
-                        split[0].parse::<u16>().unwrap()
-                    }
+                    word.parse::<u16>().unwrap()
                 }
             };
             tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
-        } else {
-            break;
         }
     };
 }
 
-fn indicate_byte(tokens: &mut Tokens, number_of_lines: u32, words: std::slice::Iter<&str>) {
+fn indicate_byte(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slice::Iter<&str>) {
     let mut byte = 0;
-    for word in words {
-        let split: Vec<&str> = word.split(':').collect();
-        if split.len() == 2 {
-            for _ in 0..split[1].parse::<usize>().unwrap() {
+    while let Some(word) = words.next() {
+        if 1 < word.len() && word.ends_with(':') {
+            let mut word = word.to_string();
+            let word2 = words.next().unwrap();
+            word.pop().unwrap();
+            for _ in 0..word2.parse::<usize>().unwrap() {
                 byte = {
-                    if let Some(num) = is_hexadecimal(&split[0]) {
+                    if let Some(num) = is_hexadecimal(&word) {
+                        num as u8
+                    } else if let Ok(num) = word.parse::<i8>() {
                         num as u8
                     } else {
-                        if let Ok(num) = split[0].parse::<i8>() {
-                            num as u8
-                        } else {
-                            split[0].parse::<u8>().unwrap()
-                        }
+                        word.parse::<u8>().unwrap()
                     }
                 };
                 tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
             }
-        } else if word.starts_with(':') {
-            let mut word = word.to_string();
-            word.remove(0);
+        } else if &word[..] == ":" {
+            let word = words.next().unwrap();
             for _ in 1..word.parse::<usize>().unwrap() {
                 tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
             }
-        } else if !is_comment(&word) {
+        } else {
             byte = {
-                if let Some(num) = is_hexadecimal(&split[0]) {
+                if let Some(num) = is_hexadecimal(&word) {
+                    num as u8
+                } else if let Ok(num) = word.parse::<i8>() {
                     num as u8
                 } else {
-                    if let Ok(num) = split[0].parse::<i8>() {
-                        num as u8
-                    } else {
-                        split[0].parse::<u8>().unwrap()
-                    }
+                    word.parse::<u8>().unwrap()
                 }
             };
             tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
-        } else {
-            break;
         }
     };
 }
 
 fn split_words(line: &str) -> Vec<String> {
     let mut words: Vec<String> = Vec::new();
+
+    let line = line.replace(":", ": ");
     let mut line_iter = line.chars();
 
     while let Some(ch) = line_iter.next() {
@@ -540,6 +545,11 @@ fn split_words(line: &str) -> Vec<String> {
                 }
                 words.push((byte as u8).to_string());
             }
+
+        // ignore comment
+        } else if ch == '#' {
+            // expect non '\'' or '"' before '#'
+            return words;
 
         // word except string
         } else {
