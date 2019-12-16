@@ -38,7 +38,7 @@ pub fn run() {
         }
 
         let old_tokens_len = tokens.len();
-        tokenize(number_of_lines, &input, &mut tokens);
+        tokenize(number_of_lines, 0, &input, &mut tokens);
         number_of_lines += 1;
 
         if 0 < tokens.len() {

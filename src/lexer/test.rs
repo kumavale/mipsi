@@ -40,7 +40,9 @@ main:
     BEQZ BGEZ BGTZ BLEZ BLTZ BNEZ
     SLT SLTU SLTI SLTIU SEQ SGE SGEU SGT SGTU SLE SLEU SNE
     REM REMU
-    .text .data .globl main
+    .text
+    .data
+    .globl main
 w:  .word 42, 0, 1, 2, 3
 h:  .half 3, 2, 1, 0, 42
 b:  .byte 'a', 'i', 'u', 'e', 'o'
@@ -74,13 +76,15 @@ PRTN PRTI PRTH PRTX PRTC PRTS
 .byte  -128, -1, -0, 0, 1, 127, 255
 
 RST
+    .data 0x00001000
+    .text 0xffff7fff
 ";
 
     let mut tokens: Tokens = Tokens::new();
     let mut buf = String::new();
     let mut reader = BufReader::new(input.as_bytes());
     while reader.read_line(&mut buf).unwrap() > 0 {
-        tokenize(0, &buf, &mut tokens);
+        tokenize(0, 0, &buf, &mut tokens);
         buf.clear();
     }
 
@@ -204,37 +208,39 @@ RST
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::REMU));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::text));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::globl("main".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("w".to_string(), 113, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("w".to_string(), 115, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(42)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(0)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(1)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(2)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::word(3)));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("h".to_string(), 120, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("h".to_string(), 122, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(3)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(2)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(1)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(0)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::half(42)));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("b".to_string(), 127, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("b".to_string(), 129, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(97)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(105)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(117)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(101)));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::byte(111)));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("s".to_string(), 134, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("s".to_string(), 136, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::ascii("string".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("z".to_string(), 137, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("z".to_string(), 139, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::asciiz("stringz".to_string())));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("n".to_string(), 140, None));
+    assert_eq!(tokens.consume_kind(), TokenKind::LABEL("n".to_string(), 142, None));
     assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::space(256)));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::NOR));
@@ -335,6 +341,10 @@ RST
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::RST));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::data));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
+    assert_eq!(tokens.consume_kind(), TokenKind::INDICATE(IndicateKind::text));
+    assert_eq!(tokens.consume_kind(), TokenKind::EOL);
 }
 
 #[test]
@@ -365,7 +375,7 @@ main: ## Start of code section\n
     let mut buf = String::new();
     let mut reader = BufReader::new(input.as_bytes());
     while reader.read_line(&mut buf).unwrap() > 0 {
-        tokenize(0, &buf, &mut tokens);
+        tokenize(0, 0, &buf, &mut tokens);
         buf.clear();
     }
 

@@ -9,6 +9,7 @@ impl Tokens {
                  foremost: true,
                  length: 0,
                  addresses: Vec::new(),
+                 filenames: Vec::new(),
         }
     }
 
@@ -24,9 +25,9 @@ impl Tokens {
         self.length
     }
 
-    pub fn push(&mut self, kind: TokenKind, line: u32) {
+    pub fn push(&mut self, kind: TokenKind, line: u32, filename_idx: usize) {
         self.length += 1;
-        self.token.push(Token { kind, line });
+        self.token.push(Token { kind, line, filename_idx });
     }
 
     pub fn pop(&mut self) -> Option<Token> {
@@ -49,6 +50,10 @@ impl Tokens {
         self.addresses.push((label, token_index));
     }
 
+    pub fn add_file(&mut self, file: &str) {
+        self.filenames.push(file.to_string());
+    }
+
     #[allow(dead_code)]
     pub fn reset(&mut self) {
         self.foremost = true;
@@ -62,7 +67,9 @@ impl Tokens {
             // `TOKEN_TRACE=1 cargo run`
             if std::env::var("TOKEN_TRACE").is_ok() {
                 println!("line:index, kind");
-                println!("{:?}:{:?},\t{:?}", &self.token[0].line, &self.idx, &self.token[0].kind);
+                println!("{}:{:?}:{:?},\t{:?}",
+                    &self.filenames[self.token[0].filename_idx],
+                    &self.token[0].line, &self.idx, &self.token[0].kind);
             }
 
             Some(self.token[0].clone())
@@ -71,7 +78,9 @@ impl Tokens {
 
             // `TOKEN_TRACE=1 cargo run`
             if std::env::var("TOKEN_TRACE").is_ok() {
-                println!("{:?}:{:?},\t{:?}", &self.token[self.idx].line, &self.idx,  &self.token[self.idx].kind);
+                println!("{}:{:?}:{:?},\t{:?}",
+                    &self.filenames[self.token[self.idx].filename_idx],
+                    &self.token[self.idx].line, &self.idx,  &self.token[self.idx].kind);
             }
 
             Some(self.token[self.idx].clone())
@@ -88,7 +97,8 @@ impl Tokens {
     pub fn goto(&mut self, idx: usize) {
         // `TOKEN_TRACE=1 cargo run`
         if std::env::var("TOKEN_TRACE").is_ok() {
-            println!(" |\n | GOTO: {:?}:{:?},\t{:?}\n |",
+            println!(" |\n | GOTO: {}:{:?}:{:?},\t{:?}\n |",
+                &self.filenames[self.token[idx+1].filename_idx],
                 &self.token[idx+1].line, idx+1,  &self.token[idx+1].kind);
         }
 
@@ -174,6 +184,11 @@ impl Tokens {
     /// Return: Ok((register_idx, append idx))
     pub fn expect_stack(&self) -> Result<(usize, i32), String> {
         if let TokenKind::STACK(_, i, j) = self.token[self.idx].kind {
+            //if 0 <= i as i32 + j {
+            //    dbg!(i);
+            //    let mut s = String::new();
+            //    std::io::stdin().read_line(&mut s).unwrap();
+            //}
             Ok((i, j))
         } else {
             let t = self.token[self.idx].clone();

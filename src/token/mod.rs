@@ -86,12 +86,18 @@ pub enum InstructionKind {
     JR,       // Rs, Rd        | Rd = next idx; goto Rs
     JALR,     // Rs            | goto Rs
 
-    /// Load, Store
+    /// Load
     LA,       // Rd, address   | Rt = idx(stack)
     LB,       // Rt, address   | Rt = stack[idx] (8bit)
+    LBU,      // Rt, address   | Rt = stack[idx] (8bit)
     LH,       // Rt, address   | Rt = stack[idx] (16bit)
+    LHU,      // Rt, address   | Rt = stack[idx] (16bit)
     LW,       // Rt, address   | Rt = stack[idx] (32bit)
-    SW,       // Rt, address   | stack[idx] = Rt
+
+    /// Store
+    SB,       // Rt, address   | stack[idx] = Rt (8bit)
+    SH,       // Rt, address   | stack[idx] = Rt (16bit)
+    SW,       // Rt, address   | stack[idx] = Rt (32bit)
 
     /// Transfer
     MOVE,     // Rd, Rs        | Rd = Rs
@@ -145,16 +151,18 @@ pub enum TokenKind {
 pub struct Token {
     pub kind: TokenKind,  // Token kind
     pub line: u32,        // Number of lines
+    filename_idx: usize,  // File name index
 }
 
 #[derive(Debug)]
 pub struct Tokens {
-    pub token: Vec<Token>,          // Token's vector
-    pub data_area_now: bool,        // for data_analysis() in REPL
+    pub token: Vec<Token>,            // Token's vector
+    pub data_area_now: bool,          // for data_analysis() in REPL
 
-    idx: usize,                     // Current index
-    foremost: bool,                 // Foremost
-    length: usize,                  // Token length
-    addresses: Vec<(String, usize)> // (label name, token index)
+    idx: usize,                       // Current index
+    foremost: bool,                   // Foremost
+    length: usize,                    // Token length
+    addresses: Vec<(String, usize)>,  // (label name, token index)
+    filenames: Vec<String>,           // filenames
 }
 

@@ -49,42 +49,42 @@ pub fn parse(mut tokens: &mut Tokens,
             // Arithmetic, Logic
             InstructionKind::ADD |
             InstructionKind::ADDI =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y)?,
             InstructionKind::ADDU |
             InstructionKind::ADDIU =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 + y as u32) as i32),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 + y as u32) as i32)?,
             InstructionKind::SUB =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y)?,
             InstructionKind::SUBU =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 - y as u32) as i32),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 - y as u32) as i32)?,
             InstructionKind::MUL =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y)?,
             InstructionKind::REM =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x % y),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x % y)?,
             InstructionKind::REMU =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 % y as u32) as i32),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 % y as u32) as i32)?,
 
             InstructionKind::DIV =>
-                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::DIV),
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::DIV)?,
             InstructionKind::DIVU =>
-                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::DIVU),
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::DIVU)?,
             InstructionKind::MULT =>
-                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MULT),
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MULT)?,
             InstructionKind::MULTU =>
-                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MULTU),
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MULTU)?,
             InstructionKind::MADD =>
-                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MADD),
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MADD)?,
             InstructionKind::MADDU =>
-                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MADDU),
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MADDU)?,
             InstructionKind::MSUB =>
-                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MSUB),
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MSUB)?,
             InstructionKind::MSUBU =>
-                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MSUBU),
+                eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MSUBU)?,
 
             InstructionKind::MULO =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y)?,
             InstructionKind::MULOU =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 * y as u32) as i32),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 * y as u32) as i32)?,
             InstructionKind::CLO =>
                 eval_arithmetic(&mut registers, &mut tokens, move |x, _| {
                     let mut cnt: i32 = 0;
@@ -93,7 +93,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         cnt += 1;
                     }
                     cnt
-                }),
+                })?,
             InstructionKind::CLZ =>
                 eval_arithmetic(&mut registers, &mut tokens, move |x, _| {
                     let mut cnt: i32 = 0;
@@ -102,7 +102,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         cnt += 1;
                     }
                     cnt
-                }),
+                })?,
             InstructionKind::ROR => {
                 tokens.consume().unwrap();
                 let rd_idx = tokens.expect_register()?;
@@ -117,7 +117,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         } else if let Ok(num) = tokens.expect_integer() {
                             num
                         } else {
-                            return Err("ROR: invalid token".into());
+                            return Err("ROR: invalid token".to_string());
                         }
                     };
                     registers[1] = (rs as u32 >> rt) as i32;
@@ -139,7 +139,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         } else if let Ok(num) = tokens.expect_integer() {
                             num
                         } else {
-                            return Err("ROL: invalid token".into());
+                            return Err("ROL: invalid token".to_string());
                         }
                     };
                     registers[1] = rs << rt;
@@ -149,7 +149,7 @@ pub fn parse(mut tokens: &mut Tokens,
             },
 
             InstructionKind::NOR =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| !(x | y)),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| !(x | y))?,
             InstructionKind::NOT => {
                 tokens.consume().unwrap();
                 let rd_idx = tokens.expect_register()?;
@@ -161,123 +161,177 @@ pub fn parse(mut tokens: &mut Tokens,
             },
             InstructionKind::NEG |
             InstructionKind::NEGU => // UNSTABLE
-                eval_arithmetic(&mut registers, &mut tokens, |x, _| -x),
+                eval_arithmetic(&mut registers, &mut tokens, |x, _| -x)?,
 
             InstructionKind::SLL |
             InstructionKind::SLLV =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x << y),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x << y)?,
             InstructionKind::SRA |
             InstructionKind::SRAV =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x >> y),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x >> y)?,
             InstructionKind::SRL |
             InstructionKind::SRLV =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 >> y) as i32),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 >> y) as i32)?,
 
             InstructionKind::AND |
             InstructionKind::ANDI =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x & y),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x & y)?,
             InstructionKind::OR |
             InstructionKind::ORI =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x | y),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x | y)?,
             InstructionKind::XOR |
             InstructionKind::XORI =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x ^ y),
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x ^ y)?,
 
             // Constant
             InstructionKind::LI =>
-                eval_constant(&mut registers, &mut tokens, |x| x),
+                eval_constant(&mut registers, &mut tokens, |x| x)?,
             InstructionKind::LUI =>
-                eval_constant(&mut registers, &mut tokens, |x| x & (std::u32::MAX-65535) as i32),
+                eval_constant(&mut registers, &mut tokens, |x| x & (std::u32::MAX-65535) as i32)?,
 
             // Comparison
             InstructionKind::SLT |
             InstructionKind::SLTI =>
-                eval_comparison(&mut registers, &mut tokens, |x, y| x < y),
+                eval_comparison(&mut registers, &mut tokens, |x, y| x < y)?,
             InstructionKind::SEQ =>
-                eval_comparison(&mut registers, &mut tokens, |x, y| x == y),
+                eval_comparison(&mut registers, &mut tokens, |x, y| x == y)?,
             InstructionKind::SGE =>
-                eval_comparison(&mut registers, &mut tokens, |x, y| x >= y),
+                eval_comparison(&mut registers, &mut tokens, |x, y| x >= y)?,
             InstructionKind::SGT =>
-                eval_comparison(&mut registers, &mut tokens, |x, y| x > y),
+                eval_comparison(&mut registers, &mut tokens, |x, y| x > y)?,
             InstructionKind::SLE =>
-                eval_comparison(&mut registers, &mut tokens, |x, y| x <= y),
+                eval_comparison(&mut registers, &mut tokens, |x, y| x <= y)?,
             InstructionKind::SNE =>
-                eval_comparison(&mut registers, &mut tokens, |x, y| x != y),
+                eval_comparison(&mut registers, &mut tokens, |x, y| x != y)?,
 
             // Branch
             InstructionKind::B =>
-                if eval_branch(&mut registers, &mut tokens, |_, _| true)   { continue; },
+                if eval_branch(&mut registers, &mut tokens, |_, _| true)?   { continue; },
             InstructionKind::BEQ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x == y) { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x == y)? { continue; },
             InstructionKind::BNE =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x != y) { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x != y)? { continue; },
             InstructionKind::BGE =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x >= y) { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x >= y)? { continue; },
             InstructionKind::BGT =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x > y)  { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x > y)?  { continue; },
             InstructionKind::BLE =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y) { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y)? { continue; },
             InstructionKind::BLT =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)  { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)?  { continue; },
             InstructionKind::BEQZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x == y) { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x == y)? { continue; },
             InstructionKind::BGEZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x >= y) { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x >= y)? { continue; },
             InstructionKind::BGTZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x > y)  { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x > y)?  { continue; },
             InstructionKind::BLEZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y) { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x <= y)? { continue; },
             InstructionKind::BLTZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)  { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x < y)?  { continue; },
             InstructionKind::BNEZ =>
-                if eval_branch(&mut registers, &mut tokens, |x, y| x != y) { continue; },
+                if eval_branch(&mut registers, &mut tokens, |x, y| x != y)? { continue; },
 
             // Jump
             InstructionKind::J =>
-                if eval_jump(&mut registers, &mut tokens, InstructionKind::J)    { continue; },
+                { eval_jump(&mut registers, &mut tokens, InstructionKind::J)?;    continue; },
             InstructionKind::JAL =>
-                if eval_jump(&mut registers, &mut tokens, InstructionKind::JAL)  { continue; },
+                { eval_jump(&mut registers, &mut tokens, InstructionKind::JAL)?;  continue; },
             InstructionKind::JR =>
-                if eval_jump(&mut registers, &mut tokens, InstructionKind::JR)   { continue; },
+                { eval_jump(&mut registers, &mut tokens, InstructionKind::JR)?;   continue; },
             InstructionKind::JALR =>
-                if eval_jump(&mut registers, &mut tokens, InstructionKind::JALR) { continue; },
+                { eval_jump(&mut registers, &mut tokens, InstructionKind::JALR)?; continue; },
 
             // Load
+            // UNSTABLE
             InstructionKind::LA => {
                 tokens.consume().unwrap();
                 let register_idx = tokens.expect_register()?;
                 tokens.consume().unwrap();
-                let label_idx = tokens.expect_address()? as i32;
-                registers[register_idx] = label_idx;
+                registers[register_idx] = {
+                    if let Ok(label_idx) = tokens.expect_address() {
+                        label_idx as i32
+                    } else if let Ok(stack_idx) = tokens.expect_stack() {
+                        let (r_idx, append) = stack_idx;
+                        stack[registers[r_idx] as usize + append as usize] as i32
+                    } else {
+                        let (r_idx, data_idx) = tokens.expect_data()?;
+                        data[registers[r_idx] as usize + data_idx] as i32
+                    }
+                };
             },
-            InstructionKind::LB =>  // Rt = *((int*)address) (8bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, 1),
-            InstructionKind::LH =>  // Rt = *((int*)address) (16bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, 2),
-            InstructionKind::LW =>  // Rt = *((int*)address) (32bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, 4),
+            InstructionKind::LB =>   // Rt = *((int*)address) (8bit)
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, -1)?,
+            InstructionKind::LBU =>  // Rt = *((int*)address) (8bit)
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, 1)?,
+            InstructionKind::LH =>   // Rt = *((int*)address) (16bit)
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, -2)?,
+            InstructionKind::LHU =>  // Rt = *((int*)address) (16bit)
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, 2)?,
+            InstructionKind::LW =>   // Rt = *((int*)address) (32bit)
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, -4)?,
 
             // Store
+            // SB,SH,SW UNSTABLE TODO
+            InstructionKind::SB => {  // *((int*)address) = Rt (8bit)
+                tokens.consume().unwrap();
+                let register_idx = tokens.expect_register()?;
+                tokens.consume().unwrap();
+                if let Ok((r_idx, s_idx)) = tokens.expect_stack() {
+                    let stack_idx = -(registers[r_idx] + s_idx) as usize;
+                    if stack.len() <= stack_idx+1 {
+                        stack.resize(stack_idx+1+1, 0);
+                    }
+                    stack[stack_idx] = registers[register_idx] as u8;
+                } else {
+                    let (r_idx, d_idx) = tokens.expect_data()?;
+                    let index = registers[r_idx] as usize + d_idx - 1;
+                    data[index] = registers[register_idx] as u8;
+                }
+            },
+            InstructionKind::SH => {  // *((int*)address) = Rt (16bit)
+                tokens.consume().unwrap();
+                let register_idx = tokens.expect_register()?;
+                tokens.consume().unwrap();
+                if let Ok((r_idx, s_idx)) = tokens.expect_stack() {
+                    let stack_idx = -(registers[r_idx] + s_idx) as usize;
+                    if stack.len() <= stack_idx+2 {
+                        stack.resize(stack_idx+2+1, 0);
+                    }
+                    stack[stack_idx]   = (registers[register_idx]>> 8) as u8;
+                    stack[stack_idx+1] = (registers[register_idx]    ) as u8;
+                } else {
+                    let (r_idx, d_idx) = tokens.expect_data()?;
+                    let index = registers[r_idx] as usize + d_idx - 1;
+                    data[index]   = (registers[register_idx]>>8) as u8;
+                    data[index+1] = (registers[register_idx]   ) as u8;
+                }
+            },
             InstructionKind::SW => {  // *((int*)address) = Rt (32bit)
                 tokens.consume().unwrap();
                 let register_idx = tokens.expect_register()?;
                 tokens.consume().unwrap();
                 if let Ok((r_idx, s_idx)) = tokens.expect_stack() {
                     let stack_idx = -(registers[r_idx] + s_idx) as usize;
-                    if stack.len() <= stack_idx {
-                        stack.resize(stack_idx+1, 0);
+                    if stack.len() <= stack_idx+4 {
+                        stack.resize(stack_idx+4+1, 0);
                     }
-                    stack[stack_idx-3] = (registers[register_idx]>>24) as u8;
-                    stack[stack_idx-2] = (registers[register_idx]>>16) as u8;
-                    stack[stack_idx-1] = (registers[register_idx]>> 8) as u8;
-                    stack[stack_idx]   = (registers[register_idx]    ) as u8;
-                } else {
-                    let (r_idx, d_idx) = tokens.expect_data()?;
+                    stack[stack_idx]   = (registers[register_idx]>>24) as u8;
+                    stack[stack_idx+1] = (registers[register_idx]>>16) as u8;
+                    stack[stack_idx+2] = (registers[register_idx]>> 8) as u8;
+                    stack[stack_idx+3] = (registers[register_idx]    ) as u8;
+                } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                     let index = registers[r_idx] as usize + d_idx - 1;
                     data[index]   = (registers[register_idx]>>24) as u8;
                     data[index+1] = (registers[register_idx]>>16) as u8;
                     data[index+2] = (registers[register_idx]>> 8) as u8;
                     data[index+3] = (registers[register_idx]    ) as u8;
+                } else {
+                    let data_idx = tokens.expect_address()?;
+                    data[data_idx]   = (registers[register_idx]>>24) as u8;
+                    data[data_idx+1] = (registers[register_idx]>>16) as u8;
+                    data[data_idx+2] = (registers[register_idx]>> 8) as u8;
+                    data[data_idx+3] = (registers[register_idx]    ) as u8;
                 }
             },
 
@@ -291,7 +345,7 @@ pub fn parse(mut tokens: &mut Tokens,
                     } else {
                         // TODO
                         //todo!();
-                        panic!("TODO");
+                        return Err("TODO".to_string());
                     };
                     registers[r1_idx]
                 };
@@ -307,7 +361,7 @@ pub fn parse(mut tokens: &mut Tokens,
                     },
                     // print_string: $a0=string(data index)
                     4  => {
-                        print!("{}", get_string(&data, &stack, registers[4]));  // $a0
+                        print!("{}", get_string(&data, &stack, registers[4])?);  // $a0
                         std::io::stdout().flush().unwrap();
                     },
                     // read_int: return $v0
@@ -322,7 +376,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         std::io::stdin().read_line(&mut input).unwrap();
                         let mut index = registers[4] as usize - 1;
                         if index >= data.len() {
-                            panic!("invalid address for .space: {}", registers[4]);
+                            return Err(format!("invalid address for .space: {}", registers[4]));
                         }
                         for (i, ch) in input.into_bytes().iter().enumerate() {
                             if i >= registers[5] as usize {
@@ -349,17 +403,17 @@ pub fn parse(mut tokens: &mut Tokens,
 
             // My own
             InstructionKind::PRTN =>
-                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTN),
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTN)?,
             InstructionKind::PRTI =>
-                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTI),
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTI)?,
             InstructionKind::PRTH =>
-                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTH),
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTH)?,
             InstructionKind::PRTX =>
-                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTX),
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTX)?,
             InstructionKind::PRTC =>
-                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTC),
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTC)?,
             InstructionKind::PRTS =>
-                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTS),
+                eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTS)?,
             InstructionKind::RST => {
                 for r in registers { *r = 0; }
                 *hi = 0;
@@ -398,14 +452,16 @@ pub fn parse(mut tokens: &mut Tokens,
 /// # Example
 ///
 /// ```rust
-/// let int: i32 = get_int(&data, &stack, registers[4]);
+/// let int: i32 = get_int(&data, &stack, registers[4])?;
 /// ```
 ///
 /// argument1: data:&[u8]
 /// argument2: stack:&[u8]
 /// argument3: index: isize  =>  stack(-) | data(+)
 /// argument4: byte
-pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize) -> i32 {
+pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize)
+    -> Result<i32, String>
+{
 
     // stack
     if index < 0 {
@@ -416,7 +472,7 @@ pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize) -> i32 {
             int |= (stack[index+i] as i32) << ((byte-1-i) * 8);
         }
 
-        int
+        Ok(int)
 
     // data
     } else if 0 < index {
@@ -427,14 +483,14 @@ pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize) -> i32 {
             int |= (data[index+i] as i32) << ((byte-1-i) * 8);
         }
 
-        int
+        Ok(int)
 
     } else {
-        panic!(format!("get_int(): invalid index: {}", index));
+        Err(format!("get_int(): invalid index: {}", index))
     }
 }
 
-pub fn get_string(data: &[u8], stack: &[u8], index: i32) -> String {
+pub fn get_string(data: &[u8], stack: &[u8], index: i32) -> Result<String, String> {
     // stack
     if index < 0 {
         let mut i = (-index - 1) as usize;
@@ -445,7 +501,7 @@ pub fn get_string(data: &[u8], stack: &[u8], index: i32) -> String {
             s = format!("{}{}", s, stack[i] as char);
             i += 1;
         }
-        s
+        Ok(s)
 
     // data
     } else if 0 < index {
@@ -457,10 +513,10 @@ pub fn get_string(data: &[u8], stack: &[u8], index: i32) -> String {
             s = format!("{}{}", s, data[i] as char);
             i += 1;
         }
-        s
+        Ok(s)
 
     } else {
-        panic!(format!("get_string(): invalid index: {}", index));
+        Err(format!("get_string(): invalid index: {}", index))
     }
 }
 
@@ -508,7 +564,7 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
 
                 // TokenKind::LABEL(usize) = data.len() + 1
                 if let TokenKind::LABEL(_, _, ref mut index) = &mut tokens.kind() {
-                    *index = Some(data.len() + 1);
+                    *index = Some(data.len()+1);
                     if tokens.next().unwrap().kind == TokenKind::EOL {
                         tokens.consume().unwrap();
                     }

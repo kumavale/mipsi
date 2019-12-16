@@ -3,7 +3,7 @@ use super::token::*;
 use super::token::register::RegisterKind;
 
 /// Recieve 1 line
-pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
+pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens) {
     let words: Vec<String> = split_words(&line);
     let words: Vec<&str>   = words.iter().map(|s| &**s).collect();
 
@@ -17,15 +17,15 @@ pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
     let mut words = words.iter();
     while let Some(word) = words.next() {
         if let Ok(num) = word.parse::<i32>() {
-            tokens.push(TokenKind::INTEGER(num), number_of_lines);
+            tokens.push(TokenKind::INTEGER(num), nol, fi);
         } else if let Some(num) = is_hexadecimal(&word) {
-            tokens.push(TokenKind::INTEGER(num), number_of_lines);
+            tokens.push(TokenKind::INTEGER(num), nol, fi);
         } else if let Ok((k, i)) = is_register(&word) {
-            tokens.push(TokenKind::REGISTER(k, i), number_of_lines);
+            tokens.push(TokenKind::REGISTER(k, i), nol, fi);
         } else if let Ok((k, i, a)) = is_stack(&word) {
-            tokens.push(TokenKind::STACK(k, i, a), number_of_lines);
+            tokens.push(TokenKind::STACK(k, i, a), nol, fi);
         } else if let Ok((k, i, s)) = is_data(&word) {
-            tokens.push(TokenKind::DATA(k, i, s), number_of_lines);
+            tokens.push(TokenKind::DATA(k, i, s), nol, fi);
         } else {
             let token_kind = match &*word.to_ascii_uppercase() {
                 // Arithmetic, Logic
@@ -117,11 +117,17 @@ pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
                 "JR"      => TokenKind::INSTRUCTION(InstructionKind::JR),
                 "JALR"    => TokenKind::INSTRUCTION(InstructionKind::JALR),
 
-                // Load, Store
+                // Load
                 "LA"      => TokenKind::INSTRUCTION(InstructionKind::LA),
                 "LB"      => TokenKind::INSTRUCTION(InstructionKind::LB),
+                "LBU"     => TokenKind::INSTRUCTION(InstructionKind::LBU),
                 "LH"      => TokenKind::INSTRUCTION(InstructionKind::LH),
+                "LHU"     => TokenKind::INSTRUCTION(InstructionKind::LHU),
                 "LW"      => TokenKind::INSTRUCTION(InstructionKind::LW),
+
+                // Store
+                "SB"      => TokenKind::INSTRUCTION(InstructionKind::SB),
+                "SH"      => TokenKind::INSTRUCTION(InstructionKind::SH),
                 "SW"      => TokenKind::INSTRUCTION(InstructionKind::SW),
 
                 // Transfer
@@ -163,15 +169,15 @@ pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
                                 TokenKind::INDICATE(IndicateKind::globl(label))
                             },
                             ".word" => {
-                                indicate_word(&mut tokens, number_of_lines, words);
+                                indicate_word(&mut tokens, nol, fi, words);
                                 break;
                             },
                             ".half" => {
-                                indicate_half(&mut tokens, number_of_lines, words);
+                                indicate_half(&mut tokens, nol, fi, words);
                                 break;
                             },
                             ".byte" => {
-                                indicate_byte(&mut tokens, number_of_lines, words);
+                                indicate_byte(&mut tokens, nol, fi, words);
                                 break;
                             },
                             ".space" => {
@@ -207,11 +213,11 @@ pub fn tokenize(number_of_lines: u32, line: &str, mut tokens: &mut Tokens) {
                     }
             };
 
-            tokens.push(token_kind, number_of_lines);
+            tokens.push(token_kind, nol, fi);
         }
     }
 
-    tokens.push(TokenKind::EOL, number_of_lines);
+    tokens.push(TokenKind::EOL, nol, fi);
 }
 
 
@@ -355,7 +361,7 @@ fn is_hexadecimal(word: &str) -> Option<i32> {
     }
 }
 
-fn indicate_word(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slice::Iter<&str>) {
+fn indicate_word(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice::Iter<&str>) {
     let mut int = 0;
     while let Some(word) = words.next() {
         if 1 < word.len() && word.ends_with(':') {
@@ -372,12 +378,12 @@ fn indicate_word(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slic
                         word.parse::<u32>().unwrap()
                     }
                 };
-                tokens.push(TokenKind::INDICATE(IndicateKind::word(int)), number_of_lines);
+                tokens.push(TokenKind::INDICATE(IndicateKind::word(int)), nol, fi);
             }
         } else if &word[..] == ":" {
             let word = words.next().unwrap();
             for _ in 1..word.parse::<usize>().unwrap() {
-                tokens.push(TokenKind::INDICATE(IndicateKind::word(int)), number_of_lines);
+                tokens.push(TokenKind::INDICATE(IndicateKind::word(int)), nol, fi);
             }
 
         } else {
@@ -390,12 +396,12 @@ fn indicate_word(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slic
                     word.parse::<u32>().unwrap()
                 }
             };
-            tokens.push(TokenKind::INDICATE(IndicateKind::word(int)), number_of_lines);
+            tokens.push(TokenKind::INDICATE(IndicateKind::word(int)), nol, fi);
         }
     };
 }
 
-fn indicate_half(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slice::Iter<&str>) {
+fn indicate_half(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice::Iter<&str>) {
     let mut half = 0;
     while let Some(word) = words.next() {
         if 1 < word.len() && word.ends_with(':') {
@@ -412,12 +418,12 @@ fn indicate_half(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slic
                         word.parse::<u16>().unwrap()
                     }
                 };
-                tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
+                tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), nol, fi);
             }
         } else if &word[..] == ":" {
             let word = words.next().unwrap();
             for _ in 1..word.parse::<usize>().unwrap() {
-                tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
+                tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), nol, fi);
             }
 
         } else {
@@ -430,12 +436,12 @@ fn indicate_half(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slic
                     word.parse::<u16>().unwrap()
                 }
             };
-            tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), number_of_lines);
+            tokens.push(TokenKind::INDICATE(IndicateKind::half(half)), nol, fi);
         }
     };
 }
 
-fn indicate_byte(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slice::Iter<&str>) {
+fn indicate_byte(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice::Iter<&str>) {
     let mut byte = 0;
     while let Some(word) = words.next() {
         if 1 < word.len() && word.ends_with(':') {
@@ -452,12 +458,12 @@ fn indicate_byte(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slic
                         word.parse::<u8>().unwrap()
                     }
                 };
-                tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
+                tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), nol, fi);
             }
         } else if &word[..] == ":" {
             let word = words.next().unwrap();
             for _ in 1..word.parse::<usize>().unwrap() {
-                tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
+                tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), nol, fi);
             }
         } else {
             byte = {
@@ -469,7 +475,7 @@ fn indicate_byte(tokens: &mut Tokens, number_of_lines: u32, mut words: std::slic
                     word.parse::<u8>().unwrap()
                 }
             };
-            tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), number_of_lines);
+            tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), nol, fi);
         }
     };
 }
@@ -490,19 +496,20 @@ fn split_words(line: &str) -> Vec<String> {
         // string for .asciiz | literal
         if ch == '"' {
             let mut asciiz = "\"".to_string();
-            while let Some(mut ch2) = line_iter.next() {
+            while let Some(ch2) = line_iter.next() {
                 if ch2 != '"' {
-                    if ch2 == '\\' {
+                    let mut ch2 = ch2.to_string();
+                    if &ch2 == "\\" {
                         let ch3 = line_iter.next().unwrap();
                         ch2 = match ch3 {
-                            '\\' => '\\',
-                            '\'' => '\'',
-                            '"'  => '\"',
-                            '0'  => '\0',
-                            'n'  => '\n',
-                            'r'  => '\r',
-                            't'  => '\t',
-                            _ => panic!("not support this escape sequence: \\{}", ch3),
+                            '\\' => "\\".to_string(),
+                            '\'' => "\'".to_string(),
+                            '"'  => "\"".to_string(),
+                            '0'  => "\0".to_string(),
+                            'n'  => "\n".to_string(),
+                            'r'  => "\r".to_string(),
+                            't'  => "\t".to_string(),
+                            _    => format!("\\{}", ch),
                         };
                     }
                     asciiz = format!("{}{}", asciiz, ch2);
