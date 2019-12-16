@@ -151,9 +151,9 @@ RST
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::JR));
     assert_eq!(tokens.consume_kind(), TokenKind::REGISTER(RegisterKind::ra, 31));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
-    assert_eq!(tokens.consume_kind(), TokenKind::STACK(RegisterKind::sp, 29,  0));
-    assert_eq!(tokens.consume_kind(), TokenKind::STACK(RegisterKind::t0,  8,  0));
-    assert_eq!(tokens.consume_kind(), TokenKind::STACK(RegisterKind::t1,  9, 20));
+    assert_eq!(tokens.consume_kind(), TokenKind::MEMORY(RegisterKind::sp, 29,  0));
+    assert_eq!(tokens.consume_kind(), TokenKind::MEMORY(RegisterKind::t0,  8,  0));
+    assert_eq!(tokens.consume_kind(), TokenKind::MEMORY(RegisterKind::t1,  9, 20));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);
     assert_eq!(tokens.consume_kind(), TokenKind::INSTRUCTION(InstructionKind::NOP));
     assert_eq!(tokens.consume_kind(), TokenKind::EOL);

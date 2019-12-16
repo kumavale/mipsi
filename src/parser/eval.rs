@@ -230,7 +230,7 @@ pub fn eval_load(registers: &mut [i32], tokens: &mut Tokens, data: &[u8], stack:
     tokens.consume().unwrap();
     let register_idx = tokens.expect_register()?;
     tokens.consume().unwrap();
-    if let Ok((r_idx, s_idx)) = tokens.expect_stack() { // data or stack
+    if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
         let idx = registers[r_idx] + s_idx;
 
         let is_data_idx = if idx < 0 {
@@ -316,7 +316,7 @@ pub fn eval_myown(registers: &[i32], tokens: &mut Tokens, data: &[u8], stack: &[
                 print!("{}", registers[r_idx]);
             } else if let Ok(num) = tokens.expect_integer() {
                 print!("{}", num);
-            } else if let Ok((r_idx, s_idx)) = tokens.expect_stack() { // data or stack
+            } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
                 let idx = registers[r_idx] + s_idx;
 
                 let is_data_idx = if idx < 0 {

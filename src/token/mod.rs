@@ -137,8 +137,8 @@ pub enum TokenKind {
     INSTRUCTION(InstructionKind),         // Instruction
     INDICATE(IndicateKind),               // Indication
     INTEGER(i32),                         // Immediate
-    REGISTER(RegisterKind, usize),        // (_, Index)
-    STACK(RegisterKind, usize, i32),      // (_, Append index)
+    REGISTER(RegisterKind, usize),        // (_, Register index)
+    MEMORY(RegisterKind, usize, i32),     // (_, Register index, Append index)
     DATA(RegisterKind, usize, String),    // (_, Label name)
     LABEL(String, usize, Option<usize>),  // (Literal, Token index, Data index)
     ADDRESS(String),                      // Label

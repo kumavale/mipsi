@@ -22,8 +22,8 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens) {
             tokens.push(TokenKind::INTEGER(num), nol, fi);
         } else if let Ok((k, i)) = is_register(&word) {
             tokens.push(TokenKind::REGISTER(k, i), nol, fi);
-        } else if let Ok((k, i, a)) = is_stack(&word) {
-            tokens.push(TokenKind::STACK(k, i, a), nol, fi);
+        } else if let Ok((k, i, a)) = is_memory(&word) {
+            tokens.push(TokenKind::MEMORY(k, i, a), nol, fi);
         } else if let Ok((k, i, s)) = is_data(&word) {
             tokens.push(TokenKind::DATA(k, i, s), nol, fi);
         } else {
@@ -269,8 +269,8 @@ fn is_register(word: &str) -> Result<(RegisterKind, usize), String> {
 }
 
 /// [0-9]?[0-9]* \( `is_register` \)
-fn is_stack(word: &str) -> Result<(RegisterKind, usize, i32), String> {
-    let errmsg = format!("is_stack(): not stack identifier: {}", word);
+fn is_memory(word: &str) -> Result<(RegisterKind, usize, i32), String> {
+    let errmsg = format!("is_memory(): not memory index: {}", word);
     if Some(')') != word.chars().nth(word.len()-1) {
         return  Err(errmsg);
     }
@@ -299,7 +299,7 @@ fn is_stack(word: &str) -> Result<(RegisterKind, usize, i32), String> {
 
 /// [a-zA-Z_][a-zA-Z_0-9]* \( `is_register` \)
 fn is_data(word: &str) -> Result<(RegisterKind, usize, String), String> {
-    let errmsg = format!("is_stack(): not stack identifier: {}", word);
+    let errmsg = format!("is_data(): not data identifier: {}", word);
     if Some(')') != word.chars().nth(word.len()-1) {
         return  Err(errmsg);
     }

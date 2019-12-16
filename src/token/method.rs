@@ -182,8 +182,8 @@ impl Tokens {
     }
 
     /// Return: Ok((register_idx, append idx))
-    pub fn expect_stack(&self) -> Result<(usize, i32), String> {
-        if let TokenKind::STACK(_, i, j) = self.token[self.idx].kind {
+    pub fn expect_memory(&self) -> Result<(usize, i32), String> {
+        if let TokenKind::MEMORY(_, i, j) = self.token[self.idx].kind {
             //if 0 <= i as i32 + j {
             //    dbg!(i);
             //    let mut s = String::new();
@@ -192,7 +192,7 @@ impl Tokens {
             Ok((i, j))
         } else {
             let t = self.token[self.idx].clone();
-            Err(format!("{}: expect TokenKind::STACK(RegisterKind, usize, usize). but got: {:?}", t.line, t.kind))
+            Err(format!("{}: expect TokenKind::MEMORY(RegisterKind, usize, i32). but got: {:?}", t.line, t.kind))
         }
     }
 

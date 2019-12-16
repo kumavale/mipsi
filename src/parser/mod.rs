@@ -251,7 +251,7 @@ pub fn parse(mut tokens: &mut Tokens,
                 registers[register_idx] = {
                     if let Ok(label_idx) = tokens.expect_address() {
                         label_idx as i32
-                    } else if let Ok(stack_idx) = tokens.expect_stack() {
+                    } else if let Ok(stack_idx) = tokens.expect_memory() {
                         let (r_idx, append) = stack_idx;
                         stack[registers[r_idx] as usize + append as usize] as i32
                     } else {
@@ -277,7 +277,7 @@ pub fn parse(mut tokens: &mut Tokens,
                 tokens.consume().unwrap();
                 let register_idx = tokens.expect_register()?;
                 tokens.consume().unwrap();
-                if let Ok((r_idx, s_idx)) = tokens.expect_stack() {
+                if let Ok((r_idx, s_idx)) = tokens.expect_memory() {
                     let stack_idx = -(registers[r_idx] + s_idx) as usize;
                     if stack.len() <= stack_idx+1 {
                         stack.resize(stack_idx+1+1, 0);
@@ -293,7 +293,7 @@ pub fn parse(mut tokens: &mut Tokens,
                 tokens.consume().unwrap();
                 let register_idx = tokens.expect_register()?;
                 tokens.consume().unwrap();
-                if let Ok((r_idx, s_idx)) = tokens.expect_stack() {
+                if let Ok((r_idx, s_idx)) = tokens.expect_memory() {
                     let stack_idx = -(registers[r_idx] + s_idx) as usize;
                     if stack.len() <= stack_idx+2 {
                         stack.resize(stack_idx+2+1, 0);
@@ -311,7 +311,7 @@ pub fn parse(mut tokens: &mut Tokens,
                 tokens.consume().unwrap();
                 let register_idx = tokens.expect_register()?;
                 tokens.consume().unwrap();
-                if let Ok((r_idx, s_idx)) = tokens.expect_stack() {
+                if let Ok((r_idx, s_idx)) = tokens.expect_memory() {
                     let stack_idx = -(registers[r_idx] + s_idx) as usize;
                     if stack.len() <= stack_idx+4 {
                         stack.resize(stack_idx+4+1, 0);
