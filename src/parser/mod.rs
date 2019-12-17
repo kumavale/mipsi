@@ -432,6 +432,11 @@ pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize, se: SignExt
     // data
     if 0 < index {
         let index = (index - 1) as usize;
+        if data.len() < index+byte {
+            return Err(
+                format!("get_int(): index out of bounds: the data len is {}, but the index is {}-{}",
+                data.len(), index, index+byte-1));
+        }
         // Big Endian
         for i in 0..byte {
             int |= (data[index+i] as u32) << ((byte-1-i) * 8);
@@ -440,6 +445,11 @@ pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize, se: SignExt
     // stack
     } else {
         let index = -index as usize;
+        if stack.len() < index+byte {
+            return Err(
+                format!("get_int(): index out of bounds: the stack len is {}, but the index is {}-{}",
+                stack.len(), index, index+byte-1));
+        }
         // Big Endian
         for i in 0..byte {
             int |= (stack[index+i] as u32) << ((byte-1-i) * 8);
@@ -541,7 +551,7 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                     // Align 2^n
                     TokenKind::INDICATE(IndicateKind::align(n)) => {
                         let padding = 2i32.pow(*n as u32) as usize;
-                        let i = data.len() % padding;
+                        let i = padding - data.len() % padding;
                         for _ in 0..i {
                             data.push(0);
                         }

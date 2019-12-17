@@ -231,16 +231,14 @@ pub fn eval_load(registers: &mut [i32], tokens: &mut Tokens,
     tokens.consume().unwrap();
     let register_idx = tokens.expect_register()?;
     tokens.consume().unwrap();
-    if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-        let idx = (registers[r_idx] + s_idx) as isize;
-        registers[register_idx] = get_int(&data, &stack, idx, byte, se)?;
+    let idx = if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
+        (registers[r_idx] + s_idx) as isize
     } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-        let idx = (d_idx as i32 + registers[r_idx]) as isize;
-        registers[register_idx] = get_int(&data, &stack, idx, byte, se)?;
+        (d_idx as i32 + registers[r_idx]) as isize
     } else {
-        let idx = tokens.expect_address()? as isize;
-        registers[register_idx] = get_int(&data, &stack, idx, byte, se)?;
-    }
+        tokens.expect_address()? as isize
+    };
+    registers[register_idx] = get_int(&data, &stack, idx, byte, se)?;
 
     Ok(())
 }
@@ -265,8 +263,8 @@ pub fn eval_store(registers: &mut [i32], tokens: &mut Tokens,
         // stack
         } else {
             let index = -idx as usize;
-            if stack.len() <= index+(byte-1) {
-                stack.resize(index+(byte-1)+1, 0);
+            if stack.len() <= index+byte {
+                stack.resize(index+byte+1, 0);
             }
             for i in 0..byte {
                 stack[index+i] = (registers[register_idx] >> ((byte-1-i)*8)) as u8;
@@ -288,7 +286,8 @@ pub fn eval_store(registers: &mut [i32], tokens: &mut Tokens,
     Ok(())
 }
 
-pub fn eval_myown(registers: &[i32], tokens: &mut Tokens, data: &[u8], stack: &[u8], kind: InstructionKind)
+pub fn eval_myown(registers: &[i32], tokens: &mut Tokens,
+    data: &[u8], stack: &[u8], kind: InstructionKind)
     -> Result<()>
 {
     match kind {
@@ -302,44 +301,14 @@ pub fn eval_myown(registers: &[i32], tokens: &mut Tokens, data: &[u8], stack: &[
             } else if let Ok(num) = tokens.expect_integer() {
                 print!("{}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-                let idx = registers[r_idx] + s_idx;
-
-                let is_data_idx = if idx < 0 {
-                    false
-                } else if 0 < idx {
-                    true
-                } else {
-                    return Err("eval_myown(): invalid index: 0".to_string());
-                };
-
-                // data index
-                if is_data_idx {
-                    let idx = registers[r_idx] as isize;
-                    print!("{}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
-
-                    // stack index
-                } else {
-                    let stack_idx = (-idx) as usize;
-                    let num = {
-                        let mut int = 0;
-                        for i in 0..4 {
-                            int |= (stack[stack_idx-(4-1-i)] as i32) << ((4-1-i) * 8);
-                        }
-                        int
-                    };
-                    print!("{}", num);
-                }
+                let idx = (registers[r_idx] + s_idx) as isize;
+                print!("{}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
+            } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
+                let idx = (registers[r_idx] as usize + d_idx) as isize;
+                print!("{}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
             } else {
-                let (r_idx, d_idx) = tokens.expect_data()?;
-                let num = {
-                    let mut int = 0;
-                    let index = d_idx - 1 + registers[r_idx] as usize;
-                    for i in 0..4 {
-                        int |= (data[index+i] as i32) << ((4-1-i) * 8);
-                    }
-                    int
-                };
-                print!("{}", num);
+                let idx = tokens.expect_address()? as isize;
+                print!("{}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
         },

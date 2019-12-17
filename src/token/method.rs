@@ -47,7 +47,9 @@ impl Tokens {
     }
 
     pub fn back_idx(&mut self) {
-        self.idx -= 1;
+        if 0 < self.idx {
+            self.idx -= 1;
+        }
         if self.idx == 0 {
             self.foremost = true;
         }
