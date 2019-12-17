@@ -260,120 +260,23 @@ pub fn parse(mut tokens: &mut Tokens,
                 };
             },
             InstructionKind::LB =>   // Rt = *((int*)address) (8bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, 1, SignExtension::Signed)?,
+                eval_load(&mut registers, &mut tokens, &data, &stack, 1, SignExtension::Signed)?,
             InstructionKind::LBU =>  // Rt = *((int*)address) (8bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, 1, SignExtension::Unsigned)?,
+                eval_load(&mut registers, &mut tokens, &data, &stack, 1, SignExtension::Unsigned)?,
             InstructionKind::LH =>   // Rt = *((int*)address) (16bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, 2, SignExtension::Signed)?,
+                eval_load(&mut registers, &mut tokens, &data, &stack, 2, SignExtension::Signed)?,
             InstructionKind::LHU =>  // Rt = *((int*)address) (16bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, 2, SignExtension::Unsigned)?,
+                eval_load(&mut registers, &mut tokens, &data, &stack, 2, SignExtension::Unsigned)?,
             InstructionKind::LW =>   // Rt = *((int*)address) (32bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, 4, SignExtension::Unsigned)?,
+                eval_load(&mut registers, &mut tokens, &data, &stack, 4, SignExtension::Unsigned)?,
 
             // Store
-            InstructionKind::SB => {  // *((int*)address) = Rt (8bit)
-                tokens.consume().unwrap();
-                let register_idx = tokens.expect_register()?;
-                tokens.consume().unwrap();
-                if let Ok((r_idx, append)) = tokens.expect_memory() {
-                    let idx = registers[r_idx] + append;
-
-                    // data
-                    if 0 < idx {
-                        let index = (idx - 1) as usize;
-                        data[index] = registers[register_idx] as u8;
-
-                    // stack
-                    } else {
-                        let index = -idx as usize;
-                        if stack.len() <= index {
-                            stack.resize(index+1, 0);
-                        }
-                        stack[index] = registers[register_idx] as u8;
-                    }
-                } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                    let index = registers[r_idx] as usize + d_idx - 1;
-                    data[index] = registers[register_idx] as u8;
-                } else {
-                    let data_idx = tokens.expect_address()?;
-                    let index = data_idx - 1;
-                    data[index] = registers[register_idx] as u8;
-                }
-            },
-            InstructionKind::SH => {  // *((int*)address) = Rt (16bit)
-                tokens.consume().unwrap();
-                let register_idx = tokens.expect_register()?;
-                tokens.consume().unwrap();
-                if let Ok((r_idx, append)) = tokens.expect_memory() {
-                    let idx = registers[r_idx] + append;
-
-                    // data
-                    if 0 < idx {
-                        let index = (idx - 1) as usize;
-                        data[index]   = (registers[register_idx]>>8) as u8;
-                        data[index+1] = (registers[register_idx]   ) as u8;
-
-                    // stack
-                    } else {
-                        let index = -idx as usize;
-                        if stack.len() <= index+1 {
-                            stack.resize(index+1+1, 0);
-                        }
-                        stack[index]   = (registers[register_idx]>>8) as u8;
-                        stack[index+1] = (registers[register_idx]   ) as u8;
-                    }
-                } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                    let index = registers[r_idx] as usize + d_idx - 1;
-                    data[index]   = (registers[register_idx]>>8) as u8;
-                    data[index+1] = (registers[register_idx]   ) as u8;
-                } else {
-                    let data_idx = tokens.expect_address()?;
-                    let index = data_idx - 1;
-                    data[index]   = (registers[register_idx]>>8) as u8;
-                    data[index+1] = (registers[register_idx]   ) as u8;
-                }
-            },
-            InstructionKind::SW => {  // *((int*)address) = Rt (32bit)
-                tokens.consume().unwrap();
-                let register_idx = tokens.expect_register()?;
-                tokens.consume().unwrap();
-                if let Ok((r_idx, append)) = tokens.expect_memory() {
-                    let idx = registers[r_idx] + append;
-
-                    // data
-                    if 0 < idx {
-                        let index = (idx - 1) as usize;
-                        data[index]   = (registers[register_idx]>>24) as u8;
-                        data[index+1] = (registers[register_idx]>>16) as u8;
-                        data[index+2] = (registers[register_idx]>> 8) as u8;
-                        data[index+3] = (registers[register_idx]    ) as u8;
-
-                    // stack
-                    } else {
-                        let index = -idx as usize;
-                        if stack.len() <= index+3 {
-                            stack.resize(index+3+1, 0);
-                        }
-                        stack[index]   = (registers[register_idx]>>24) as u8;
-                        stack[index+1] = (registers[register_idx]>>16) as u8;
-                        stack[index+2] = (registers[register_idx]>> 8) as u8;
-                        stack[index+3] = (registers[register_idx]    ) as u8;
-                    }
-                } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                    let index = registers[r_idx] as usize + d_idx - 1;
-                    data[index]   = (registers[register_idx]>>24) as u8;
-                    data[index+1] = (registers[register_idx]>>16) as u8;
-                    data[index+2] = (registers[register_idx]>> 8) as u8;
-                    data[index+3] = (registers[register_idx]    ) as u8;
-                } else {
-                    let data_idx = tokens.expect_address()?;
-                    let index = data_idx - 1;
-                    data[index]   = (registers[register_idx]>>24) as u8;
-                    data[index+1] = (registers[register_idx]>>16) as u8;
-                    data[index+2] = (registers[register_idx]>> 8) as u8;
-                    data[index+3] = (registers[register_idx]    ) as u8;
-                }
-            },
+            InstructionKind::SB =>  // *((int*)address) = Rt (8bit)
+                eval_store(&mut registers, &mut tokens, &mut data, &mut stack, 1)?,
+            InstructionKind::SH =>  // *((int*)address) = Rt (16bit)
+                eval_store(&mut registers, &mut tokens, &mut data, &mut stack, 2)?,
+            InstructionKind::SW =>  // *((int*)address) = Rt (32bit)
+                eval_store(&mut registers, &mut tokens, &mut data, &mut stack, 4)?,
 
             // Transfer
             InstructionKind::MOVE => {
@@ -628,8 +531,9 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                 // TokenKind::LABEL(usize) = data.len() + 1
                 if let TokenKind::LABEL(_, _, ref mut index) = &mut tokens.kind() {
                     *index = Some(data.len()+1);
-                    if tokens.next().unwrap().kind == TokenKind::EOL {
-                        tokens.consume().unwrap();
+                    if tokens.next().is_some()
+                        && tokens.next().unwrap().kind == TokenKind::EOL {
+                        continue 'outer;
                     }
                 }
 
@@ -641,63 +545,55 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                         for _ in 0..i {
                             data.push(0);
                         }
+                        continue 'outer;
                     },
-                    TokenKind::INDICATE(IndicateKind::word(w)) => {
-                        data.push((*w>>24) as u8);
-                        data.push((*w>>16) as u8);
-                        data.push((*w>> 8) as u8);
-                        data.push( *w      as u8);
+                    TokenKind::INDICATE(IndicateKind::space(s)) => {
+                        for _ in 0..*s {
+                            data.push(0);
+                        }
+                        continue 'outer;
                     },
-                    TokenKind::INDICATE(IndicateKind::half(h)) => {
-                        data.push((*h>> 8) as u8);
-                        data.push( *h      as u8);
+                    TokenKind::INDICATE(IndicateKind::ascii(s)) => {
+                        for ch in s.bytes() {
+                            data.push(ch);
+                        }
+                        continue 'outer;
                     },
-                    TokenKind::INDICATE(IndicateKind::byte(b)) => {
-                        data.push(*b);
+                    TokenKind::INDICATE(IndicateKind::asciiz(s)) => {
+                        for ch in s.bytes() {
+                            data.push(ch);
+                        }
+                        data.push(0);
+                        continue 'outer;
                     },
                     _ => (),
                 }
 
                 // until EOL
-                while let Some(token) = tokens.consume() {
-                    if token.kind == TokenKind::EOL {
-                        break;
-                    }
-
-                    match tokens.kind() {
+                while {
+                    let still_indicate = match tokens.kind() {
                         // Big Endian
                         TokenKind::INDICATE(IndicateKind::word(w)) => {
                             data.push((*w>>24) as u8);
                             data.push((*w>>16) as u8);
                             data.push((*w>> 8) as u8);
                             data.push( *w      as u8);
+                            true
                         },
                         TokenKind::INDICATE(IndicateKind::half(h)) => {
                             data.push((*h>> 8) as u8);
                             data.push( *h      as u8);
+                            true
                         },
                         TokenKind::INDICATE(IndicateKind::byte(b)) => {
                             data.push(*b);
+                            true
                         },
-                        TokenKind::INDICATE(IndicateKind::space(s)) => {
-                            for _ in 0..*s {
-                                data.push(0);
-                            }
-                        },
-                        TokenKind::INDICATE(IndicateKind::ascii(s)) => {
-                            for ch in s.bytes() {
-                                data.push(ch);
-                            }
-                        },
-                        TokenKind::INDICATE(IndicateKind::asciiz(s)) => {
-                            for ch in s.bytes() {
-                                data.push(ch);
-                            }
-                            data.push(0);
-                        },
-                        _ => (),
-                    }
-                }
+                        _ => false,
+                    };
+
+                    still_indicate && tokens.consume().is_some()
+                } {}
 
                 tokens.consume().is_some()
             } {}

@@ -225,7 +225,7 @@ pub fn eval_jump(registers: &mut [i32], tokens: &mut Tokens, kind: InstructionKi
 }
 
 pub fn eval_load(registers: &mut [i32], tokens: &mut Tokens,
-    data: &[u8], stack: &mut Vec<u8>, byte: usize, se: SignExtension)
+    data: &[u8], stack: &[u8], byte: usize, se: SignExtension)
     -> Result<()>
 {
     tokens.consume().unwrap();
@@ -240,6 +240,49 @@ pub fn eval_load(registers: &mut [i32], tokens: &mut Tokens,
     } else {
         let idx = tokens.expect_address()? as isize;
         registers[register_idx] = get_int(&data, &stack, idx, byte, se)?;
+    }
+
+    Ok(())
+}
+
+pub fn eval_store(registers: &mut [i32], tokens: &mut Tokens,
+    data: &mut Vec<u8>, stack: &mut Vec<u8>, byte: usize)
+    -> Result<()>
+{
+    tokens.consume().unwrap();
+    let register_idx = tokens.expect_register()?;
+    tokens.consume().unwrap();
+    if let Ok((r_idx, append)) = tokens.expect_memory() {
+        let idx = registers[r_idx] + append;
+
+        // data
+        if 0 < idx {
+            let index = (idx - 1) as usize;
+            for i in 0..byte {
+                data[index+i] = (registers[register_idx] >> ((byte-1-i)*8)) as u8;
+            }
+
+        // stack
+        } else {
+            let index = -idx as usize;
+            if stack.len() <= index+(byte-1) {
+                stack.resize(index+(byte-1)+1, 0);
+            }
+            for i in 0..byte {
+                stack[index+i] = (registers[register_idx] >> ((byte-1-i)*8)) as u8;
+            }
+        }
+    } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
+        let index = registers[r_idx] as usize + d_idx - 1;
+        for i in 0..byte {
+            data[index+i] = (registers[register_idx] >> ((byte-1-i)*8)) as u8;
+        }
+    } else {
+        let data_idx = tokens.expect_address()?;
+        let index = data_idx - 1;
+        for i in 0..byte {
+            data[index+i] = (registers[register_idx] >> ((byte-1-i)*8)) as u8;
+        }
     }
 
     Ok(())
