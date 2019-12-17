@@ -22,14 +22,13 @@ pub fn parse(mut tokens: &mut Tokens,
     //println!("data: {:?}", data);
     //println!("tokens: {:?}", tokens);
 
-    #[allow(unused)]
-    while let Some(token) = tokens.consume() {
-        //println!("{:?}", token); continue;
+    while tokens.consume().is_some() {
+        //println!("{:?}", *tokens.kind()); continue;
 
         // Skip until .text
-        if TokenKind::INDICATE(IndicateKind::data) == token.kind {
-            while let Some(token) = tokens.consume() {
-                if TokenKind::INDICATE(IndicateKind::text) == token.kind {
+        if TokenKind::INDICATE(IndicateKind::data) == *tokens.kind() {
+            while tokens.consume().is_some() {
+                if TokenKind::INDICATE(IndicateKind::text) == *tokens.kind() {
                     break;
                 }
             }
@@ -39,13 +38,10 @@ pub fn parse(mut tokens: &mut Tokens,
         }
 
         // Skip LABEL, INDICATE and EOL
-        if let TokenKind::LABEL(_, _, _) = tokens.kind() {
-            tokens.consume().unwrap();
-        }
-        if let TokenKind::INDICATE(_) = tokens.kind() {
-            while let TokenKind::INDICATE(_) = tokens.consume().unwrap().kind { continue; }
-        }
-        if tokens.expect_eol().is_ok() { continue; }
+        while match *tokens.kind() {
+            TokenKind::LABEL(_, _, _) | TokenKind::INDICATE(_) | TokenKind::EOL => true,
+            _ => false,
+        } { if tokens.consume().is_none() { return Ok(()); } }
 
         let instruction_kind = tokens.expect_instruction()?;
 
@@ -335,12 +331,7 @@ pub fn parse(mut tokens: &mut Tokens,
                     },
                     // exit
                     10 => {
-                        for r in registers { *r = 0; }
-                        *hi = 0;
-                        *lo = 0;
-                        data.clear();
-                        stack.clear();
-                        tokens.init();
+                        reset(&mut registers, &mut hi, &mut lo, &mut data, &mut stack, &mut tokens);
                         break;
                     },
                     // random_int:
@@ -375,12 +366,7 @@ pub fn parse(mut tokens: &mut Tokens,
             InstructionKind::PRTS =>
                 eval_myown(&registers, &mut tokens, &data, &stack, InstructionKind::PRTS)?,
             InstructionKind::RST => {
-                for r in registers { *r = 0; }
-                *hi = 0;
-                *lo = 0;
-                data.clear();
-                stack.clear();
-                tokens.init();
+                reset(&mut registers, &mut hi, &mut lo, &mut data, &mut stack, &mut tokens);
                 break;
             },
             //_ => (),
@@ -390,13 +376,13 @@ pub fn parse(mut tokens: &mut Tokens,
         tokens.consume();
         tokens.expect_eol()?;
 
-        if std::env::var("DATA_TRACE").is_ok() {
+        if tokens.data_trace() {
             display_data_per_4byte(&data);
         }
-        if std::env::var("STACK_TRACE").is_ok() {
+        if tokens.stack_trace() {
             display_stack(&stack);
         }
-        if std::env::var("REGISTER_TRACE").is_ok() {
+        if tokens.register_trace() {
             display_register(&registers);
         }
     }
@@ -493,6 +479,16 @@ pub fn get_string(data: &[u8], stack: &[u8], index: i32)
     }
 }
 
+fn reset(registers: &mut &mut[i32], hi: &mut &mut u32, lo: &mut &mut u32,
+    data: &mut &mut Vec<u8>, stack: &mut &mut Vec<u8>, tokens: &mut &mut Tokens) {
+    for r in registers.iter_mut() { *r = 0; }
+    **hi = 0;
+    **lo = 0;
+    data.clear();
+    stack.clear();
+    tokens.init();
+}
+
 /// Push to data: &Vec<u8> from .data segment's data
 fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
     let old_idx = tokens.idx();
@@ -526,7 +522,7 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                 // consume EOL
                 while TokenKind::EOL == *tokens.kind() {
                     if tokens.next().is_some() {
-                        tokens.consume().unwrap();
+                        tokens.consume();
                     } else {
                         break 'outer;
                     }

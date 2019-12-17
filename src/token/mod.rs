@@ -163,5 +163,10 @@ pub struct Tokens {
     length: usize,                    // Token length
     addresses: Vec<(String, usize)>,  // (label name, token index)
     filenames: Vec<String>,           // filenames
+
+    token_trace: bool,                // Environment variable 'TOKEN_TRACE'
+    data_trace: bool,                 // Environment variable 'DATA_TRACE'
+    stack_trace: bool,                // Environment variable 'STACK_TRACE'
+    register_trace: bool,             // Environment variable 'REGISTER_TRACE'
 }
 

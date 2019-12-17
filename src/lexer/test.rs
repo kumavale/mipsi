@@ -91,8 +91,8 @@ RST
     // `cargo test -- --nocapture`
     while let Some(token) = tokens.consume() {
         print!("{:?}", token);
-        std::io::stdout().flush().unwrap();
-        if token.kind == TokenKind::EOL {
+        let _ = std::io::stdout().flush();
+        if *tokens.kind() == TokenKind::EOL {
             println!();
         }
     }
@@ -410,7 +410,8 @@ main: ## Start of code section\n
 #[cfg(test)]
 impl Tokens {
     pub fn consume_kind(&mut self) -> TokenKind {
-        self.consume().unwrap().kind
+        self.consume();
+        self.kind().clone()
     }
 }
 

@@ -3,6 +3,11 @@ use super::super::token::*;
 impl Tokens {
     pub fn new() -> Self {
         let token: Vec<Token> = Vec::new();
+        let token_trace    = std::env::var("TOKEN_TRACE").is_ok();
+        let data_trace     = std::env::var("DATA_TRACE").is_ok();
+        let stack_trace    = std::env::var("STACK_TRACE").is_ok();
+        let register_trace = std::env::var("REGISTER_TRACE").is_ok();
+
         Tokens { token,
                  data_area_now: true,
                  idx: 0,
@@ -10,6 +15,10 @@ impl Tokens {
                  length: 0,
                  addresses: Vec::new(),
                  filenames: Vec::new(),
+                 token_trace,
+                 data_trace,
+                 stack_trace,
+                 register_trace,
         }
     }
 
@@ -69,33 +78,54 @@ impl Tokens {
         self.idx = 0;
     }
 
-    pub fn consume(&mut self) -> Option<Token> {
+    #[allow(dead_code)]
+    pub fn token_trace(&self) -> bool {
+        self.token_trace
+    }
+
+    #[allow(dead_code)]
+    pub fn data_trace(&self) -> bool {
+        self.data_trace
+    }
+
+    #[allow(dead_code)]
+    pub fn stack_trace(&self) -> bool {
+        self.stack_trace
+    }
+
+    #[allow(dead_code)]
+    pub fn register_trace(&self) -> bool {
+        self.register_trace
+    }
+
+    #[allow(dead_code)]
+    pub fn consume(&mut self) -> Option<&Token> {
         if self.foremost {
             self.foremost = false;
 
             // `TOKEN_TRACE=1 cargo run`
-            if std::env::var("TOKEN_TRACE").is_ok() {
+            if self.token_trace {
                 println!("line:index, kind");
                 println!("{}:{:?}:{:?},\t{:?}",
                     &self.filenames[self.token[0].filename_idx],
                     &self.token[0].line, &self.idx, &self.token[0].kind);
             }
 
-            Some(self.token[0].clone())
+            Some(&self.token[0])
         } else if self.idx+1 < self.length {
             self.idx += 1;
 
             // `TOKEN_TRACE=1 cargo run`
-            if std::env::var("TOKEN_TRACE").is_ok() {
+            if self.token_trace {
                 println!("{}:{:?}:{:?},\t{:?}",
                     &self.filenames[self.token[self.idx].filename_idx],
                     &self.token[self.idx].line, &self.idx,  &self.token[self.idx].kind);
             }
 
-            Some(self.token[self.idx].clone())
+            Some(&self.token[self.idx])
         } else {
             // `TOKEN_TRACE=1 cargo run`
-            if std::env::var("TOKEN_TRACE").is_ok() {
+            if self.token_trace {
                 println!("EOF");
             }
 
@@ -105,7 +135,7 @@ impl Tokens {
 
     pub fn goto(&mut self, idx: usize) {
         // `TOKEN_TRACE=1 cargo run`
-        if std::env::var("TOKEN_TRACE").is_ok() {
+        if self.token_trace {
             println!(" |\n | GOTO: {}:{:?}:{:?},\t{:?}\n |",
                 &self.filenames[self.token[idx+1].filename_idx],
                 &self.token[idx+1].line, idx+1,  &self.token[idx+1].kind);
