@@ -46,6 +46,13 @@ impl Tokens {
         }
     }
 
+    pub fn back_idx(&mut self) {
+        self.idx -= 1;
+        if self.idx == 0 {
+            self.foremost = true;
+        }
+    }
+
     pub fn add_address(&mut self, label: String, token_index: usize) {
         self.addresses.push((label, token_index));
     }
@@ -130,7 +137,7 @@ impl Tokens {
 
     /// Get data index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
     pub fn expect_address(&self) -> Result<usize, String> {
-        if let TokenKind::ADDRESS(s) = self.token[self.idx].kind.clone() {
+        if let TokenKind::ADDRESS(s) = &self.token[self.idx].kind {
             let line = self.token[self.idx].line;
             for t in &self.token {
                 if let TokenKind::LABEL(name, _, idx) = &t.kind {
@@ -142,14 +149,14 @@ impl Tokens {
             }
             Err(format!("{}: invalid address: {}", line, s))
         } else {
-            let t = self.token[self.idx].clone();
+            let t = &self.token[self.idx];
             Err(format!("{}: expect TokenKind::ADDRESS(String). but got: {:?}", t.line, t.kind))
         }
     }
 
     /// Get label index of String same as TokenKind::ADDRESS() from TokenKind::LABEL()
     pub fn expect_label(&self) -> Result<usize, String> {
-        if let TokenKind::ADDRESS(s) = self.token[self.idx].kind.clone() {
+        if let TokenKind::ADDRESS(s) = &self.token[self.idx].kind {
             for a in &self.addresses {
                 if *s == *a.0 {
                     return Ok(a.1);
@@ -158,7 +165,7 @@ impl Tokens {
             let line = self.token[self.idx].line;
             Err(format!("{}: invalid address: {}", line, s))
         } else {
-            let t = self.token[self.idx].clone();
+            let t = &self.token[self.idx];
             Err(format!("{}: expect TokenKind::ADDRESS(String). but got: {:?}", t.line, t.kind))
         }
     }
@@ -167,7 +174,7 @@ impl Tokens {
         if let TokenKind::INSTRUCTION(k) = self.token[self.idx].kind {
             Ok(k)
         } else {
-            let t = self.token[self.idx].clone();
+            let t = &self.token[self.idx];
             Err(format!("{}: expect TokenKind::INSTRUCTION(InstructionKind). but got: {:?}", t.line, t.kind))
         }
     }
@@ -176,7 +183,7 @@ impl Tokens {
         if let TokenKind::REGISTER(_, i) = self.token[self.idx].kind {
             Ok(i)
         } else {
-            let t = self.token[self.idx].clone();
+            let t = &self.token[self.idx];
             Err(format!("{}: expect TokenKind::REGISTER(RegisterKind, usize). but got: {:?}", t.line, t.kind))
         }
     }
@@ -184,50 +191,42 @@ impl Tokens {
     /// Return: Ok((register_idx, append idx))
     pub fn expect_memory(&self) -> Result<(usize, i32), String> {
         if let TokenKind::MEMORY(_, i, j) = self.token[self.idx].kind {
-            //if 0 <= i as i32 + j {
-            //    dbg!(i);
-            //    let mut s = String::new();
-            //    std::io::stdin().read_line(&mut s).unwrap();
-            //}
             Ok((i, j))
         } else {
-            let t = self.token[self.idx].clone();
+            let t = &self.token[self.idx];
             Err(format!("{}: expect TokenKind::MEMORY(RegisterKind, usize, i32). but got: {:?}", t.line, t.kind))
         }
     }
 
     /// Return: Ok((register_idx, data index))
     pub fn expect_data(&self) -> Result<(usize, usize), String> {
-        if let TokenKind::DATA(_, r_i, s) = self.token[self.idx].kind.clone() {
+        if let TokenKind::DATA(_, r_i, s) = &self.token[self.idx].kind {
             for t in &self.token {
                 if let TokenKind::LABEL(name, _, Some(d_i)) = &t.kind {
                     if *s == *name {
-                        return Ok((r_i, *d_i));
+                        return Ok((*r_i, *d_i));
                     }
                 }
             }
-            let t = self.token[self.idx].clone();
-            Err(format!("{}: expect TokenKind::DATA(RegisterKind, usize, String). but got: {:?}", t.line, t.kind))
-        } else {
-            let t = self.token[self.idx].clone();
-            Err(format!("{}: expect TokenKind::DATA(RegisterKind, usize, String). but got: {:?}", t.line, t.kind))
         }
+        let t = &self.token[self.idx];
+        Err(format!("{}: expect TokenKind::DATA(RegisterKind, usize, String). but got: {:?}", t.line, t.kind))
     }
 
     pub fn expect_integer(&self) -> Result<i32, String> {
         if let TokenKind::INTEGER(i) = self.token[self.idx].kind {
             Ok(i)
         } else {
-            let t = self.token[self.idx].clone();
+            let t = &self.token[self.idx];
             Err(format!("{}: expect TokenKind::INTEGER(i32). but got: {:?}", t.line, t.kind))
         }
     }
 
     pub fn expect_literal(&self) -> Result<String, String> {
-        if let TokenKind::LITERAL(l) = self.token[self.idx].kind.clone() {
-            Ok(l)
+        if let TokenKind::LITERAL(l) = &self.token[self.idx].kind {
+            Ok(l.to_string())
         } else {
-            let t = self.token[self.idx].clone();
+            let t = &self.token[self.idx];
             Err(format!("{}: expect TokenKind::LITERAL(String). but got: {:?}", t.line, t.kind))
         }
     }
@@ -236,7 +235,7 @@ impl Tokens {
         if let TokenKind::EOL = self.token[self.idx].kind {
             Ok(())
         } else {
-            let t = self.token[self.idx].clone();
+            let t = &self.token[self.idx];
             Err(format!("{}: expect TokenKind::EOL. but got: {:?}", t.line, t.kind))
         }
     }

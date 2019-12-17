@@ -1,5 +1,5 @@
 use super::super::token::*;
-use super::super::parser::{get_int, get_string};
+use super::super::parser::{SignExtension, get_int, get_string};
 
 use std::io::Write;
 
@@ -224,80 +224,22 @@ pub fn eval_jump(registers: &mut [i32], tokens: &mut Tokens, kind: InstructionKi
     Ok(())
 }
 
-pub fn eval_load(registers: &mut [i32], tokens: &mut Tokens, data: &[u8], stack: &mut Vec<u8>, byte: isize)
+pub fn eval_load(registers: &mut [i32], tokens: &mut Tokens,
+    data: &[u8], stack: &mut Vec<u8>, byte: usize, se: SignExtension)
     -> Result<()>
 {
     tokens.consume().unwrap();
     let register_idx = tokens.expect_register()?;
     tokens.consume().unwrap();
     if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-        let idx = registers[r_idx] + s_idx;
-
-        let is_data_idx = if idx < 0 {
-            false
-        } else if 0 < idx {
-            true
-        } else {
-            return Err("eval_load(): invalid index: 0".to_string());
-        };
-
-        // data index
-        if is_data_idx {
-            let idx = registers[r_idx] as isize;
-            registers[register_idx] = get_int(&data, &stack, idx, byte.abs() as usize)?;
-
-        // stack index
-        } else {
-            let stack_idx = (-idx) as usize;
-            if stack.len() <= stack_idx {
-                stack.resize(stack_idx+1, 0);
-            }
-            registers[register_idx] = {
-                let int = {
-                    if byte < 0 {
-                        let mut int: i32 = 0;
-                        let byte = byte.abs() as usize;
-                        for i in 0..byte {
-                            //int |= (stack[stack_idx-(byte-1-i)] as i32) << ((byte-1-i) * 8);
-                            int |= (stack[stack_idx+i] as i32) << ((byte-1-i) * 8);
-                        }
-                        int
-                    } else {
-                        let mut int: u32 = 0;
-                        let byte = byte.abs() as usize;
-                        for i in 0..byte {
-                            //int |= (stack[stack_idx-(byte-1-i)] as u32) << ((byte-1-i) * 8);
-                            int |= (stack[stack_idx+i] as u32) << ((byte-1-i) * 8);
-                        }
-                        int as i32
-                    }
-                };
-                int
-            };
-        }
+        let idx = (registers[r_idx] + s_idx) as isize;
+        registers[register_idx] = get_int(&data, &stack, idx, byte, se)?;
     } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-        registers[register_idx] = {
-            let index = d_idx - 1 + registers[r_idx] as usize;
-            let int: i32 = if byte < 0 {
-                let mut int: i32 = 0;
-                let byte = byte.abs() as usize;
-                for i in 0..byte {
-                    int |= (data[index+i] as i32) << ((byte-1-i) * 8);
-                }
-                int
-            } else {
-                let mut int: u32 = 0;
-                let byte = byte.abs() as usize;
-                for i in 0..byte {
-                    int |= (data[index+i] as u32) << ((byte-1-i) * 8);
-                }
-                int as i32
-            };
-            int
-        };
+        let idx = (d_idx as i32 + registers[r_idx]) as isize;
+        registers[register_idx] = get_int(&data, &stack, idx, byte, se)?;
     } else {
         let idx = tokens.expect_address()? as isize;
-        registers[register_idx] = get_int(&data, &stack, idx, byte.abs() as usize)?;
+        registers[register_idx] = get_int(&data, &stack, idx, byte, se)?;
     }
 
     Ok(())
@@ -330,7 +272,7 @@ pub fn eval_myown(registers: &[i32], tokens: &mut Tokens, data: &[u8], stack: &[
                 // data index
                 if is_data_idx {
                     let idx = registers[r_idx] as isize;
-                    print!("{}", get_int(&data, &stack, idx, 4)?);
+                    print!("{}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
 
                     // stack index
                 } else {

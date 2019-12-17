@@ -18,9 +18,8 @@ fn main() {
     } else {
         // Join files  =>  Everyone global
         let mut tokens: Tokens = Tokens::new();
-        let mut filename_idx: usize = 0;
 
-        for file in args.iter().skip(1) {
+        for (filename_idx, file) in args.iter().skip(1).enumerate() {
             let mut number_of_lines: u32 = 1;
             let mut reader = BufReader::new(std::fs::File::open(file)
                 .expect("Failed file open"));
@@ -28,11 +27,12 @@ fn main() {
 
             let mut buf = String::new();
             while reader.read_line(&mut buf).unwrap() > 0 {
-                lexer::tokenize(number_of_lines, filename_idx, &buf, &mut tokens);
+                if let Err(e) = lexer::tokenize(number_of_lines, filename_idx, &buf, &mut tokens) {
+                    panic!("tokenize failed: {}", e);
+                }
                 number_of_lines += 1;
                 buf.clear();
             }
-            filename_idx += 1;
         }
 
         let mut registers: [i32; 32] = [0; 32];

@@ -7,12 +7,12 @@ A MIPS-32 interpreter(simulator) written in Rust.
 ## How to run
 If no argument, run with REPL  
 ```sh
-cargo run --release [file]
+cargo run --release [file...]
 ```
 
 ### Debug run
 ```sh
-[ENVIRONMENT VARIABLES] cargo run --release [file]
+[ENVIRONMENT VARIABLES] cargo run --release [file...]
 ```  
 ( e.g. `TOKEN_TRACE=1 REGISTER_TRACE=1 cargo run --release file.asm` )
 

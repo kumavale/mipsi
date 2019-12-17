@@ -1,3 +1,6 @@
+extern crate rand;
+use rand::Rng;
+
 use std::io::Write;
 
 use super::token::*;
@@ -261,15 +264,15 @@ pub fn parse(mut tokens: &mut Tokens,
                 };
             },
             InstructionKind::LB =>   // Rt = *((int*)address) (8bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, -1)?,
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, 1, SignExtension::Signed)?,
             InstructionKind::LBU =>  // Rt = *((int*)address) (8bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, 1)?,
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, 1, SignExtension::Unsigned)?,
             InstructionKind::LH =>   // Rt = *((int*)address) (16bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, -2)?,
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, 2, SignExtension::Signed)?,
             InstructionKind::LHU =>  // Rt = *((int*)address) (16bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, 2)?,
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, 2, SignExtension::Unsigned)?,
             InstructionKind::LW =>   // Rt = *((int*)address) (32bit)
-                eval_load(&mut registers, &mut tokens, &data, &mut stack, -4)?,
+                eval_load(&mut registers, &mut tokens, &data, &mut stack, 4, SignExtension::Unsigned)?,
 
             // Store
             // SB,SH,SW UNSTABLE TODO
@@ -312,14 +315,24 @@ pub fn parse(mut tokens: &mut Tokens,
                 let register_idx = tokens.expect_register()?;
                 tokens.consume().unwrap();
                 if let Ok((r_idx, s_idx)) = tokens.expect_memory() {
-                    let stack_idx = -(registers[r_idx] + s_idx) as usize;
-                    if stack.len() <= stack_idx+4 {
-                        stack.resize(stack_idx+4+1, 0);
+                    let idx = registers[r_idx] + s_idx;
+                    if idx < 0 {
+                        let stack_idx = -idx as usize;
+                        if stack.len() <= stack_idx+4 {
+                            stack.resize(stack_idx+4+1, 0);
+                        }
+                        stack[stack_idx]   = (registers[register_idx]>>24) as u8;
+                        stack[stack_idx+1] = (registers[register_idx]>>16) as u8;
+                        stack[stack_idx+2] = (registers[register_idx]>> 8) as u8;
+                        stack[stack_idx+3] = (registers[register_idx]    ) as u8;
+                    } else {
+                        let idx = idx as usize;
+                    // BREAK
+                        data[idx-1]   = (registers[register_idx]>>24) as u8;
+                        data[idx] = (registers[register_idx]>>16) as u8;
+                        data[idx+1] = (registers[register_idx]>> 8) as u8;
+                        data[idx+2] = (registers[register_idx]    ) as u8;
                     }
-                    stack[stack_idx]   = (registers[register_idx]>>24) as u8;
-                    stack[stack_idx+1] = (registers[register_idx]>>16) as u8;
-                    stack[stack_idx+2] = (registers[register_idx]>> 8) as u8;
-                    stack[stack_idx+3] = (registers[register_idx]    ) as u8;
                 } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                     let index = registers[r_idx] as usize + d_idx - 1;
                     data[index]   = (registers[register_idx]>>24) as u8;
@@ -396,6 +409,19 @@ pub fn parse(mut tokens: &mut Tokens,
                         tokens.init();
                         break;
                     },
+                    // random_int:
+                    // $a0 = random number(int)
+                    41 => {
+                        let rnd = rand::thread_rng().gen();
+                        registers[4] = rnd;
+                    },
+                    // random_int_range:
+                    // $a0 = random number(int)
+                    // $a1 = upper bound of range of returned valus.
+                    42 => {
+                        let rnd = rand::thread_rng().gen_range(0, registers[5]);  // $a1
+                        registers[4] = rnd;
+                    },
                     _ => return Err(format!("SYSCALL: invalid code: {}", registers[2])),
                 }
             },
@@ -447,64 +473,56 @@ pub fn parse(mut tokens: &mut Tokens,
     Ok(())
 }
 
+pub enum SignExtension {
+    Signed,
+    Unsigned,
+}
+
 /// Return signed integer (32-bit)
 ///
 /// # Example
 ///
 /// ```rust
-/// let int: i32 = get_int(&data, &stack, registers[4])?;
+/// let int: i32 = get_int(&data, &stack, registers[4], 4, SignExtension::Signed)?;
 /// ```
 ///
 /// argument1: data:&[u8]
 /// argument2: stack:&[u8]
-/// argument3: index: isize  =>  stack(-) | data(+)
+/// argument3: index: isize  =>  stack(<=0) | data(0<)
 /// argument4: byte
-pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize)
+pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize, se: SignExtension)
     -> Result<i32, String>
 {
-
-    // stack
-    if index < 0 {
-        let index = (-index - 1) as usize;
-        let mut int: i32 = 0;
-        // Big Endian
-        for i in 0..byte {
-            int |= (stack[index+i] as i32) << ((byte-1-i) * 8);
-        }
-
-        Ok(int)
+    let mut int: u32 = 0;
 
     // data
-    } else if 0 < index {
-        let index = ( index - 1) as usize;
-        let mut int: i32 = 0;
+    if 0 < index {
+        let index = (index - 1) as usize;
         // Big Endian
         for i in 0..byte {
-            int |= (data[index+i] as i32) << ((byte-1-i) * 8);
+            int |= (data[index+i] as u32) << ((byte-1-i) * 8);
         }
 
-        Ok(int)
-
+    // stack
     } else {
-        Err(format!("get_int(): invalid index: {}", index))
+        let index = -index as usize;
+        // Big Endian
+        for i in 0..byte {
+            int |= (stack[index+i] as u32) << ((byte-1-i) * 8);
+        }
+    }
+
+    match se {
+        SignExtension::Signed   => Ok(-(int as i32)),
+        SignExtension::Unsigned => Ok(  int as i32),
     }
 }
 
-pub fn get_string(data: &[u8], stack: &[u8], index: i32) -> Result<String, String> {
-    // stack
-    if index < 0 {
-        let mut i = (-index - 1) as usize;
-        let mut s = String::new();
-        let stack_len = stack.len();
-
-        while i < stack_len && stack[i] != 0 {
-            s = format!("{}{}", s, stack[i] as char);
-            i += 1;
-        }
-        Ok(s)
-
+pub fn get_string(data: &[u8], stack: &[u8], index: i32)
+    -> Result<String, String>
+{
     // data
-    } else if 0 < index {
+    if 0 < index {
         let mut i = (index - 1) as usize;
         let mut s = String::new();
         let data_len = data.len();
@@ -513,10 +531,21 @@ pub fn get_string(data: &[u8], stack: &[u8], index: i32) -> Result<String, Strin
             s = format!("{}{}", s, data[i] as char);
             i += 1;
         }
+
         Ok(s)
 
+    // stack
     } else {
-        Err(format!("get_string(): invalid index: {}", index))
+        let mut i = -index as usize;
+        let mut s = String::new();
+        let stack_len = stack.len();
+
+        while i < stack_len && stack[i] != 0 {
+            s = format!("{}{}", s, stack[i] as char);
+            i += 1;
+        }
+
+        Ok(s)
     }
 }
 

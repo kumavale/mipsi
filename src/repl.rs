@@ -6,7 +6,7 @@ use super::parser::{parse, display::*};
 
 pub fn run() {
     let mut tokens: Tokens = Tokens::new();
-    let mut number_of_lines: u32 = 1;
+    let mut number_of_lines: u32 = 0;
 
     let mut registers: [i32; 32] = [0; 32];
     let mut hi: u32 = 0;
@@ -15,7 +15,7 @@ pub fn run() {
     let mut stack: Vec<u8> = vec![0];
 
     println!("Welcome mipsi REPL!");
-    println!("Type `exit` or ^C to exit");
+    println!("Type `exit` or ^C to exit\n");
 
     loop {
         print!("> ");
@@ -37,24 +37,34 @@ pub fn run() {
             _ => (),
         }
 
-        let old_tokens_len = tokens.len();
-        tokenize(number_of_lines, 0, &input, &mut tokens);
         number_of_lines += 1;
+        let old_tokens_len = tokens.len();
+
+        if let Err(e) = tokenize(number_of_lines, 0, &input, &mut tokens) {
+            eprintln!("tokenize failed: {}\n", e);
+            rollback(&mut tokens, old_tokens_len);
+            continue;
+        }
 
         if 0 < tokens.len() {
             let result = parse(&mut tokens, &mut registers, &mut hi, &mut lo,
                 &mut data, &mut stack);
             if let Err(e) = result {
-                eprintln!("{}", e);
-                // rollback
-                let rollback_len = tokens.len() - old_tokens_len;
-                for _ in 0..rollback_len {
-                    tokens.pop();
-                }
+                eprintln!("{}\n", e);
+                rollback(&mut tokens, old_tokens_len);
+                continue;
             }
         }
 
         println!();
     }
+}
+
+fn rollback(tokens: &mut Tokens, old_tokens_len: usize) {
+    let rollback_len = tokens.len() - old_tokens_len;
+    for _ in 0..rollback_len {
+        tokens.pop();
+    }
+    tokens.back_idx();
 }
 

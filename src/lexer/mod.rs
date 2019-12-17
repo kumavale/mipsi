@@ -3,15 +3,17 @@ use super::token::*;
 use super::token::register::RegisterKind;
 
 /// Recieve 1 line
-pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens) {
+pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
+    -> Result<(), String>
+{
     let words: Vec<String> = split_words(&line);
     let words: Vec<&str>   = words.iter().map(|s| &**s).collect();
 
     //println!("{:?}", words);
 
-    // Skip blank line either comment line
-    if words.is_empty() || !words.is_empty() && words[0].starts_with('#') {
-        return;
+    // Ignore blank line
+    if words.is_empty() {
+        return Ok(());
     }
 
     let mut words = words.iter();
@@ -24,7 +26,7 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens) {
             tokens.push(TokenKind::REGISTER(k, i), nol, fi);
         } else if let Ok((k, i, a)) = is_memory(&word) {
             tokens.push(TokenKind::MEMORY(k, i, a), nol, fi);
-        } else if let Ok((k, i, s)) = is_data(&word) {
+        } else if let Ok((k, i, s)) = is_data_address(&word) {
             tokens.push(TokenKind::DATA(k, i, s), nol, fi);
         } else {
             let token_kind = match &*word.to_ascii_uppercase() {
@@ -181,7 +183,8 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens) {
                                 break;
                             },
                             ".space" => {
-                                let length = words.next().unwrap().parse::<u32>().unwrap();
+                                let word = words.next().unwrap();
+                                let length = indicate_space(&word);
                                 TokenKind::INDICATE(IndicateKind::space(length))
                             },
                             ".ascii" => {
@@ -200,7 +203,7 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens) {
                                 let n = words.next().unwrap().parse::<u8>().unwrap();
                                 TokenKind::INDICATE(IndicateKind::align(n))
                             },
-                            _ => TokenKind::INVALID(format!("invalid indicate: {}", word))
+                            _ => return Err(format!("invalid indicate: {}", word)),
                         }
                     } else  if word.starts_with('"')  && word.ends_with('"') ||
                                word.starts_with('\'') && word.ends_with('\'') {
@@ -218,6 +221,7 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens) {
     }
 
     tokens.push(TokenKind::EOL, nol, fi);
+    Ok(())
 }
 
 
@@ -276,7 +280,7 @@ fn is_memory(word: &str) -> Result<(RegisterKind, usize, i32), String> {
     }
     let mut add = 0;
     let mut s = word.to_string();
-    s.remove(s.len()-1);  // Delete ')'
+    s.pop();  // Delete ')'
     let mut s_chars = s.chars();
     while let Some(c) = s_chars.next() {
         let num = c as i32 - 48;
@@ -298,13 +302,13 @@ fn is_memory(word: &str) -> Result<(RegisterKind, usize, i32), String> {
 }
 
 /// [a-zA-Z_][a-zA-Z_0-9]* \( `is_register` \)
-fn is_data(word: &str) -> Result<(RegisterKind, usize, String), String> {
-    let errmsg = format!("is_data(): not data identifier: {}", word);
+fn is_data_address(word: &str) -> Result<(RegisterKind, usize, String), String> {
+    let errmsg = format!("is_data_address(): not data identifier: {}", word);
     if Some(')') != word.chars().nth(word.len()-1) {
         return  Err(errmsg);
     }
     let mut s = word.to_string();
-    s.remove(s.len()-1);  // Delete ')'
+    s.pop();  // Delete ')'
     let mut s_chars = s.chars();
 
     if let Some(c) = s_chars.next() {
@@ -356,6 +360,23 @@ fn is_hexadecimal(word: &str) -> Option<i32> {
         }
 
         Some(hex)
+    } else if word.starts_with("-0x") {
+        let mut hex: i32 = 0;
+        let mut s = word.to_string();
+        s.remove(0);
+        s.remove(0);
+        s.remove(0);  // Delete "-0x"
+
+        for h in s.chars() {
+            hex = match h {
+                '0'..='9' => (hex << 4) + (h as u8 - b'0') as i32,
+                'a'..='f' => (hex << 4) + (h as u8 - b'a' + 10) as i32,
+                'A'..='F' => (hex << 4) + (h as u8 - b'A' + 10) as i32,
+                _ => return None,
+            }
+        }
+
+        Some(-hex)
     } else {
         None
     }
@@ -480,6 +501,35 @@ fn indicate_byte(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice
     };
 }
 
+fn indicate_space(word: &str)
+    -> u32
+{
+    let mut word = word.to_string();
+
+    if word.starts_with("0x") {
+        let mut hex: u32 = 0;
+        word.remove(0);
+        word.remove(0);  // Delete "0x"
+
+        for h in word.chars() {
+            hex = match h {
+                '0'..='9' => (hex << 4) + (h as u8 - b'0') as u32,
+                'a'..='f' => (hex << 4) + (h as u8 - b'a' + 10) as u32,
+                'A'..='F' => (hex << 4) + (h as u8 - b'A' + 10) as u32,
+                _ => panic!("indicate_space(): invalid number: 0x{}", word),
+            }
+        }
+
+        hex
+
+    } else if let Ok(num) = word.parse::<u32>() {
+        num
+
+    } else {
+        panic!("indicate_space(): invalid number: {}", word);
+    }
+}
+
 fn split_words(line: &str) -> Vec<String> {
     let mut words: Vec<String> = Vec::new();
 
@@ -509,6 +559,25 @@ fn split_words(line: &str) -> Vec<String> {
                             'n'  => "\n".to_string(),
                             'r'  => "\r".to_string(),
                             't'  => "\t".to_string(),
+                            'x'  => {
+                                if let Some(expect_1) = line_iter.next() {
+                                    if expect_1 == '1' {
+                                        if let Some(expect_b) = line_iter.next() {
+                                            if let 'b'|'B' = expect_b {
+                                                "\x1b".to_string()
+                                            } else {
+                                                format!("\\x1{}", expect_b)
+                                            }
+                                        } else {
+                                            "\\x1".to_string()
+                                        }
+                                    } else {
+                                        format!("\\x{}", expect_1)
+                                    }
+                                } else {
+                                    "\\x".to_string()
+                                }
+                            },
                             _    => format!("\\{}", ch),
                         };
                     }

@@ -84,7 +84,7 @@ RST
     let mut buf = String::new();
     let mut reader = BufReader::new(input.as_bytes());
     while reader.read_line(&mut buf).unwrap() > 0 {
-        tokenize(0, 0, &buf, &mut tokens);
+        tokenize(0, 0, &buf, &mut tokens).unwrap();
         buf.clear();
     }
 
@@ -375,7 +375,7 @@ main: ## Start of code section\n
     let mut buf = String::new();
     let mut reader = BufReader::new(input.as_bytes());
     while reader.read_line(&mut buf).unwrap() > 0 {
-        tokenize(0, 0, &buf, &mut tokens);
+        tokenize(0, 0, &buf, &mut tokens).unwrap();
         buf.clear();
     }
 
