@@ -27,11 +27,11 @@ where
                     }
                 };
                 let result = fun(r1, r2);
-                if result.is_none() {
+                if let Some(res) = result {
+                    res
+                } else {
                     return Err(format!("panicked at 'arithmetic operation overflowed': {}:{}",
                             tokens.filename(), tokens.token[tokens.idx()].line));
-                } else {
-                    result.unwrap()
                 }
             } else {
                 // CLO, CLZ

@@ -290,6 +290,48 @@ pub fn parse(mut tokens: &mut Tokens,
                     registers[r1_idx]
                 };
             },
+            InstructionKind::MFHI => {
+                tokens.consume().unwrap();
+                let r_idx = tokens.expect_register()?;
+                registers[r_idx] = *hi as i32;
+            },
+            InstructionKind::MFLO => {
+                tokens.consume().unwrap();
+                let r_idx = tokens.expect_register()?;
+                registers[r_idx] = *lo as i32;
+            },
+            InstructionKind::MTHI => {
+                tokens.consume().unwrap();
+                let r_idx = tokens.expect_register()?;
+                *hi = registers[r_idx] as u32;
+            },
+            InstructionKind::MTLO => {
+                tokens.consume().unwrap();
+                let r_idx = tokens.expect_register()?;
+                *lo = registers[r_idx] as u32;
+            },
+            InstructionKind::MOVN => {
+                tokens.consume().unwrap();
+                let rd_idx = tokens.expect_register()?;
+                tokens.consume().unwrap();
+                let rs_idx = tokens.expect_register()?;
+                tokens.consume().unwrap();
+                let rt_idx = tokens.expect_register()?;
+                if registers[rt_idx] != 0 {
+                    registers[rd_idx] = registers[rs_idx];
+                }
+            },
+            InstructionKind::MOVZ => {
+                tokens.consume().unwrap();
+                let rd_idx = tokens.expect_register()?;
+                tokens.consume().unwrap();
+                let rs_idx = tokens.expect_register()?;
+                tokens.consume().unwrap();
+                let rt_idx = tokens.expect_register()?;
+                if registers[rt_idx] == 0 {
+                    registers[rd_idx] = registers[rs_idx];
+                }
+            },
 
             // Exception, Interrupt
             InstructionKind::SYSCALL => {
@@ -345,22 +387,6 @@ pub fn parse(mut tokens: &mut Tokens,
                         let mut input = String::new();
                         std::io::stdin().read_line(&mut input).unwrap();
                         registers[2] = input.as_bytes()[0] as i32;
-                    },
-                    // open file
-                    // $a0 = address of null-terminated string containing filename
-                    // $a1 = flags
-                    // $a2 = mode
-                    // $v0 contains file descriptor (negative if error).
-                    13 => {
-                    },
-                    // read from file
-                    14 => {
-                    },
-                    // write to file
-                    15 => {
-                    },
-                    // close file
-                    16 => {
                     },
                     // exit2
                     17 => {

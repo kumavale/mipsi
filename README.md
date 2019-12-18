@@ -107,12 +107,12 @@ cargo run --release [file...]
     - [ ] SC
 - [ ] Transfer
     - [x] MOVE
-    - [ ] MFHI
-    - [ ] MFLO
-    - [ ] MTHI
-    - [ ] MTLO
-    - [ ] MOVN
-    - [ ] MOVZ
+    - [x] MFHI
+    - [x] MFLO
+    - [x] MTHI
+    - [x] MTLO
+    - [x] MOVN
+    - [x] MOVZ
 - [ ] Exception, Interrupt
     - [ ] SYSCALL
         - [x]  1: print_int
@@ -125,13 +125,9 @@ cargo run --release [file...]
         - [x]  8: read_string
         - [ ]  9: sbrk(allocate heap memory)
         - [x] 10: exit
-        - [ ] 11: print_character
-        - [ ] 12: read_character
-        - [ ] 13: open file
-        - [ ] 14: read from file
-        - [ ] 15: write to file
-        - [ ] 16: close file
-        - [ ] 17: exit2
+        - [x] 11: print_character
+        - [x] 12: read_character
+        - [x] 17: exit2
         - [x] 41: random int
         - [x] 42: random int range
     - [ ] BREAK

@@ -134,6 +134,12 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
 
                 // Transfer
                 "MOVE"    => TokenKind::INSTRUCTION(InstructionKind::MOVE),
+                "MFHI"    => TokenKind::INSTRUCTION(InstructionKind::MFHI),
+                "MFLO"    => TokenKind::INSTRUCTION(InstructionKind::MFLO),
+                "MTHI"    => TokenKind::INSTRUCTION(InstructionKind::MTHI),
+                "MTLO"    => TokenKind::INSTRUCTION(InstructionKind::MTLO),
+                "MOVN"    => TokenKind::INSTRUCTION(InstructionKind::MOVN),
+                "MOVZ"    => TokenKind::INSTRUCTION(InstructionKind::MOVZ),
 
                 // Exception, Interrupt
                 "SYSCALL" => TokenKind::INSTRUCTION(InstructionKind::SYSCALL),

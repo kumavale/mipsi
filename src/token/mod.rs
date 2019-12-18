@@ -101,6 +101,12 @@ pub enum InstructionKind {
 
     /// Transfer
     MOVE,     // Rd, Rs        | Rd = Rs
+    MFHI,     // Rd            | Rd = hi
+    MFLO,     // Rd            | Rd = lo
+    MTHI,     // Rs            | hi = Rs
+    MTLO,     // Rs            | lo = Rs
+    MOVN,     // Rd, Rs, Rt    | Rd = Rs if Rt != 0
+    MOVZ,     // Rd, Rs, Rt    | Rd = Rs if Rt == 0
 
     /// Exception, Interrupt
     SYSCALL,  //
