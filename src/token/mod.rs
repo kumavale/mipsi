@@ -79,6 +79,8 @@ pub enum InstructionKind {
     BLEZ,     // Rs, label     | goto label if Rs <= 0
     BLTZ,     // Rs, label     | goto label if Rs < 0
     BNEZ,     // Rs, label     | goto label if Rs != 0
+    BGEZAL,   // Rs, label     | $ra = next idx; goto label if Rs >= 0
+    BLTZAL,   // Rs, label     | $ra = next idx; goto label if Rs < 0
 
     /// Jump
     J,        // Target        | goto Target

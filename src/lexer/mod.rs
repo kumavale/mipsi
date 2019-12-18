@@ -112,6 +112,8 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                 "BLEZ"    => TokenKind::INSTRUCTION(InstructionKind::BLEZ),
                 "BLTZ"    => TokenKind::INSTRUCTION(InstructionKind::BLTZ),
                 "BNEZ"    => TokenKind::INSTRUCTION(InstructionKind::BNEZ),
+                "BGEZAL"  => TokenKind::INSTRUCTION(InstructionKind::BGEZAL),
+                "BLTZAL"  => TokenKind::INSTRUCTION(InstructionKind::BLTZAL),
 
                 // Jump
                 "J"       => TokenKind::INSTRUCTION(InstructionKind::J),

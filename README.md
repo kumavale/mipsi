@@ -79,6 +79,8 @@ cargo run --release [file...]
     - [x] BLEZ
     - [x] BLTZ
     - [x] BNEZ
+    - [x] BGEZAL
+    - [x] BLTZAL
 - [x] Jump
     - [x] J
     - [x] JAL
@@ -89,22 +91,10 @@ cargo run --release [file...]
     - [x] LB[U]
     - [x] LH[U]
     - [x] LW
-    - [ ] LWL
-    - [ ] LWR
-    - [ ] LD
-    - [ ] ULH[U]
-    - [ ] ULW
-    - [ ] LL
 - [ ] Store
     - [x] SB
     - [x] SH
     - [x] SW
-    - [ ] SWL
-    - [ ] SWR
-    - [ ] SD
-    - [ ] USH
-    - [ ] USW
-    - [ ] SC
 - [ ] Transfer
     - [x] MOVE
     - [x] MFHI

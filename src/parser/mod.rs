@@ -232,6 +232,26 @@ pub fn parse(mut tokens: &mut Tokens,
                 if eval_branch(&mut registers, &mut tokens, |x, y| x < y)?  { continue; },
             InstructionKind::BNEZ =>
                 if eval_branch(&mut registers, &mut tokens, |x, y| x != y)? { continue; },
+            InstructionKind::BGEZAL => {
+                tokens.consume().unwrap();
+                let r_idx = tokens.expect_register()?;
+                tokens.consume().unwrap();
+                let l_idx = tokens.expect_label()?;
+                registers[31] = tokens.idx() as i32 + 1;  // $ra
+                if 0 <= registers[r_idx] {
+                    tokens.goto(l_idx-1);
+                }
+            },
+            InstructionKind::BLTZAL => {
+                tokens.consume().unwrap();
+                let r_idx = tokens.expect_register()?;
+                tokens.consume().unwrap();
+                let l_idx = tokens.expect_label()?;
+                registers[31] = tokens.idx() as i32 + 1;  // $ra
+                if registers[r_idx] < 0 {
+                    tokens.goto(l_idx-1);
+                }
+            },
 
             // Jump
             InstructionKind::J =>
