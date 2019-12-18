@@ -49,20 +49,20 @@ pub fn parse(mut tokens: &mut Tokens,
             // Arithmetic, Logic
             InstructionKind::ADD |
             InstructionKind::ADDI =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x + y)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x.checked_add(y))?,
             InstructionKind::ADDU |
             InstructionKind::ADDIU =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 + y as u32) as i32)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some(x + y))?,
             InstructionKind::SUB =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x - y)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x.checked_sub(y))?,
             InstructionKind::SUBU =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 - y as u32) as i32)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some(x - y))?,
             InstructionKind::MUL =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x.checked_mul(y))?, // TODO: mult $2,$3;mflo $1
             InstructionKind::REM =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x % y)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some(x % y))?,
             InstructionKind::REMU =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 % y as u32) as i32)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| x.checked_rem(y))?,
 
             InstructionKind::DIV =>
                 eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::DIV)?,
@@ -82,9 +82,9 @@ pub fn parse(mut tokens: &mut Tokens,
                 eval_arithmetic_hilo(&mut registers, &mut tokens, &mut hi, &mut lo, InstructionKind::MSUBU)?,
 
             InstructionKind::MULO =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x * y)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some(x * y))?,
             InstructionKind::MULOU =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 * y as u32) as i32)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some((x as u32 * y as u32) as i32))?,
             InstructionKind::CLO =>
                 eval_arithmetic(&mut registers, &mut tokens, move |x, _| {
                     let mut cnt: i32 = 0;
@@ -92,7 +92,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         if (x as usize) >> i & 1 != 1 { break; }
                         cnt += 1;
                     }
-                    cnt
+                    Some(cnt)
                 })?,
             InstructionKind::CLZ =>
                 eval_arithmetic(&mut registers, &mut tokens, move |x, _| {
@@ -101,7 +101,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         if (x as usize) >> i & 1 != 0 { break; }
                         cnt += 1;
                     }
-                    cnt
+                    Some(cnt)
                 })?,
             InstructionKind::ROR => {
                 tokens.consume().unwrap();
@@ -149,7 +149,7 @@ pub fn parse(mut tokens: &mut Tokens,
             },
 
             InstructionKind::NOR =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| !(x | y))?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some(!(x | y)))?,
             InstructionKind::NOT => {
                 tokens.consume().unwrap();
                 let rd_idx = tokens.expect_register()?;
@@ -159,29 +159,30 @@ pub fn parse(mut tokens: &mut Tokens,
                     !registers[register_idx]
                 };
             },
-            InstructionKind::NEG |
-            InstructionKind::NEGU => // UNSTABLE
-                eval_arithmetic(&mut registers, &mut tokens, |x, _| -x)?,
+            InstructionKind::NEG =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, _| Some(-x))?, // TODO (with overflow)
+            InstructionKind::NEGU =>
+                eval_arithmetic(&mut registers, &mut tokens, |x, _| Some(-x))?,
 
             InstructionKind::SLL |
             InstructionKind::SLLV =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x << y)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some(x << y))?,
             InstructionKind::SRA |
             InstructionKind::SRAV =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x >> y)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some(x >> y))?,
             InstructionKind::SRL |
             InstructionKind::SRLV =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| (x as u32 >> y) as i32)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some((x as u32 >> y) as i32))?,
 
             InstructionKind::AND |
             InstructionKind::ANDI =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x & y)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some(x & y))?,
             InstructionKind::OR |
             InstructionKind::ORI =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x | y)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some(x | y))?,
             InstructionKind::XOR |
             InstructionKind::XORI =>
-                eval_arithmetic(&mut registers, &mut tokens, |x, y| x ^ y)?,
+                eval_arithmetic(&mut registers, &mut tokens, |x, y| Some(x ^ y))?,
 
             // Constant
             InstructionKind::LI =>
@@ -296,12 +297,12 @@ pub fn parse(mut tokens: &mut Tokens,
                     // print_int: $a0=integer
                     1  => {
                         print!("{}", registers[4]);  // $a0
-                        std::io::stdout().flush().unwrap();
+                        let _ = std::io::stdout().flush();
                     },
                     // print_string: $a0=string(data index)
                     4  => {
                         print!("{}", get_string(&data, &stack, registers[4])?);  // $a0
-                        std::io::stdout().flush().unwrap();
+                        let _ = std::io::stdout().flush();
                     },
                     // read_int: return $v0
                     5  => {

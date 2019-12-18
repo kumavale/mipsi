@@ -46,9 +46,9 @@ fn main() {
             .unwrap();
 
         //println!("{:?}", tokens);
-        parser::display::display_data_per_4byte(&data);
-        parser::display::display_stack(&stack);
-        parser::display::display_register(&registers);
+        //parser::display::display_data_per_4byte(&data);
+        //parser::display::display_stack(&stack);
+        //parser::display::display_register(&registers);
     }
 }
 

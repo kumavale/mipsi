@@ -8,7 +8,7 @@ type Result<T> = std::result::Result<T, String>;
 pub fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
     -> Result<()>
 where
-    F: Fn(i32, i32) -> i32,
+    F: Fn(i32, i32) -> Option<i32>,
 {
     tokens.consume().unwrap();
     if let Ok(rd_idx) = tokens.expect_register() {
@@ -26,10 +26,16 @@ where
                         tokens.expect_integer()?
                     }
                 };
-                fun(r1, r2)
+                let result = fun(r1, r2);
+                if result.is_none() {
+                    return Err(format!("panicked at 'arithmetic operation overflowed': {}:{}",
+                            tokens.filename(), tokens.token[tokens.idx()].line));
+                } else {
+                    result.unwrap()
+                }
             } else {
                 // CLO, CLZ
-                fun(r1, 0)
+                fun(r1, 0).unwrap()
             }
         };
     }

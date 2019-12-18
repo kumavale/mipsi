@@ -155,6 +155,15 @@ impl Tokens {
         &mut self.token[self.idx].kind
     }
 
+    pub fn filename(&self) -> String {
+        let f_idx = self.token[self.idx].filename_idx;
+        if self.filenames.len() <= f_idx {
+            "REPL".to_string()
+        } else {
+            self.filenames[f_idx].clone()
+        }
+    }
+
     pub fn next(&self) -> Option<Token> {
         if self.idx + 1 < self.length {
             Some(self.token[self.idx+1].clone())

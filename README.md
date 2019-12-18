@@ -86,8 +86,8 @@ cargo run --release [file...]
     - [x] JALR
 - [ ] Load
     - [x] LA
-    - [ ] LB[U]
-    - [ ] LH[U]
+    - [x] LB[U]
+    - [x] LH[U]
     - [x] LW
     - [ ] LWL
     - [ ] LWR
@@ -96,8 +96,8 @@ cargo run --release [file...]
     - [ ] ULW
     - [ ] LL
 - [ ] Store
-    - [ ] SB
-    - [ ] SH
+    - [x] SB
+    - [x] SH
     - [x] SW
     - [ ] SWL
     - [ ] SWR
@@ -132,8 +132,8 @@ cargo run --release [file...]
         - [ ] 15: write to file
         - [ ] 16: close file
         - [ ] 17: exit2
-        - [ ] 41: random int
-        - [ ] 42: random int range
+        - [x] 41: random int
+        - [x] 42: random int range
     - [ ] BREAK
     - [x] NOP
 - [ ] Indicate
@@ -155,8 +155,10 @@ cargo run --release [file...]
     - [x] PRTX
     - [x] PRTC
     - [x] PRTS
+    - [x] RST
 
 
 ## Note
 1. ~~Unsigned integers are not supported, but instead behave as signed integers.~~  
+2. If "Debug build", panics when overflow occurs.  
 
