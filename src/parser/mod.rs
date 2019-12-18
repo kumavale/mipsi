@@ -298,17 +298,10 @@ pub fn parse(mut tokens: &mut Tokens,
             // Transfer
             InstructionKind::MOVE => {
                 tokens.consume().unwrap();
-                let register_idx = tokens.expect_register()?;
-                registers[register_idx] = {
-                    let r1_idx = if tokens.consume().is_some() {
-                        tokens.expect_register()?
-                    } else {
-                        // TODO
-                        //todo!();
-                        return Err("TODO".to_string());
-                    };
-                    registers[r1_idx]
-                };
+                let rd_idx = tokens.expect_register()?;
+                tokens.consume().unwrap();
+                let rs_idx = tokens.expect_register()?;
+                registers[rd_idx] = registers[rs_idx];
             },
             InstructionKind::MFHI => {
                 tokens.consume().unwrap();
