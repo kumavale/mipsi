@@ -341,7 +341,7 @@ pub fn eval_myown(registers: &[i32], tokens: &mut Tokens,
         InstructionKind::PRTC => {
             tokens.consume().unwrap();
             if let Ok(r_idx) = tokens.expect_register() {
-                print!("{}", &get_string(&data, &stack, registers[r_idx])?[0..1]);
+                print!("{}", registers[r_idx] as u8 as char);
             } else if let Ok(d_idx) = tokens.expect_address() {
                 print!("{}", data[d_idx-1] as char);
             } else {

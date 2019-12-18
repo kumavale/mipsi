@@ -335,6 +335,37 @@ pub fn parse(mut tokens: &mut Tokens,
                         reset(&mut registers, &mut hi, &mut lo, &mut data, &mut stack, &mut tokens);
                         break;
                     },
+                    // print_character
+                    11 => {
+                        print!("{}", registers[4] as u8 as char);
+                        let _ = std::io::stdout().flush();
+                    },
+                    // read character
+                    12 => {
+                        let mut input = String::new();
+                        std::io::stdin().read_line(&mut input).unwrap();
+                        registers[2] = input.as_bytes()[0] as i32;
+                    },
+                    // open file
+                    // $a0 = address of null-terminated string containing filename
+                    // $a1 = flags
+                    // $a2 = mode
+                    // $v0 contains file descriptor (negative if error).
+                    13 => {
+                    },
+                    // read from file
+                    14 => {
+                    },
+                    // write to file
+                    15 => {
+                    },
+                    // close file
+                    16 => {
+                    },
+                    // exit2
+                    17 => {
+                        std::process::exit(registers[4]);
+                    },
                     // random_int:
                     // $a0 = random number(int)
                     41 => {
