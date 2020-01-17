@@ -158,7 +158,7 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
 
                 _ =>
                     if is_label(&word) {
-                        let mut identifier = word.to_string();
+                        let mut identifier = (*word).to_string();
                         identifier.remove(identifier.len()-1);  // Delete ':'
                         tokens.add_address(identifier.clone(), tokens.len());
                         TokenKind::LABEL(identifier, tokens.len(), None)
@@ -175,7 +175,7 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                                 TokenKind::INDICATE(IndicateKind::data)
                             },
                             ".globl" => {
-                                let label = words.next().unwrap().to_string();
+                                let label = (*words.next().unwrap()).to_string();
                                 TokenKind::INDICATE(IndicateKind::globl(label))
                             },
                             ".word" => {
@@ -196,13 +196,13 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                                 TokenKind::INDICATE(IndicateKind::space(length))
                             },
                             ".ascii" => {
-                                let mut s = words.next().unwrap().to_string();
+                                let mut s = (*words.next().unwrap()).to_string();
                                 s.remove(0);
                                 s.remove(s.len()-1);
                                 TokenKind::INDICATE(IndicateKind::ascii(s))
                             },
                             ".asciiz" => {
-                                let mut s = words.next().unwrap().to_string();
+                                let mut s = (*words.next().unwrap()).to_string();
                                 s.remove(0);
                                 s.remove(s.len()-1);
                                 TokenKind::INDICATE(IndicateKind::asciiz(s))
@@ -215,12 +215,12 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                         }
                     } else  if word.starts_with('"')  && word.ends_with('"') ||
                                word.starts_with('\'') && word.ends_with('\'') {
-                        let mut word = word.to_string();
+                        let mut word = (*word).to_string();
                         word.remove(0);
                         word.remove(word.len()-1);
                         TokenKind::LITERAL(word)
                     } else {
-                        TokenKind::ADDRESS(word.to_string())
+                        TokenKind::ADDRESS((*word).to_string())
                     }
             };
 
@@ -394,7 +394,7 @@ fn indicate_word(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice
     let mut int = 0;
     while let Some(word) = words.next() {
         if 1 < word.len() && word.ends_with(':') {
-            let mut word = word.to_string();
+            let mut word = (*word).to_string();
             let word2 = words.next().unwrap();
             word.pop().unwrap();
             for _ in 0..word2.parse::<usize>().unwrap() {
@@ -434,7 +434,7 @@ fn indicate_half(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice
     let mut half = 0;
     while let Some(word) = words.next() {
         if 1 < word.len() && word.ends_with(':') {
-            let mut word = word.to_string();
+            let mut word = (*word).to_string();
             let word2 = words.next().unwrap();
             word.pop().unwrap();
             for _ in 0..word2.parse::<usize>().unwrap() {
@@ -474,7 +474,7 @@ fn indicate_byte(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice
     let mut byte = 0;
     while let Some(word) = words.next() {
         if 1 < word.len() && word.ends_with(':') {
-            let mut word = word.to_string();
+            let mut word = (*word).to_string();
             let word2 = words.next().unwrap();
             word.pop().unwrap();
             for _ in 0..word2.parse::<usize>().unwrap() {

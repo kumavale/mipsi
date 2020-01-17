@@ -178,3 +178,5 @@ pub struct Tokens {
     register_trace: bool,             // Environment variable 'REGISTER_TRACE'
 }
 
+pub static CONSUME_ERR: &str = "token.consume(): none";
+

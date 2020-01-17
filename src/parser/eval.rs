@@ -2,23 +2,24 @@ use super::super::token::*;
 use super::super::parser::{SignExtension, get_int, get_string};
 
 use std::io::Write;
+use std::error::Error;
 
-type Result<T> = std::result::Result<T, String>;
+type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 pub fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
     -> Result<()>
 where
     F: Fn(i32, i32) -> Option<i32>,
 {
-    tokens.consume().unwrap();
+    tokens.consume().ok_or(CONSUME_ERR)?;
     if let Ok(rd_idx) = tokens.expect_register() {
         registers[rd_idx] = {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             let register_idx = tokens.expect_register()?;
             let r1 = registers[register_idx];
 
-            if tokens.next().unwrap().kind != TokenKind::EOL {
-                tokens.consume().unwrap();
+            if tokens.next().ok_or(CONSUME_ERR)?.kind != TokenKind::EOL {
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let r2 = {
                     if let Ok(register_idx) = tokens.expect_register() {
                         registers[register_idx]
@@ -31,7 +32,7 @@ where
                     res
                 } else {
                     return Err(format!("panicked at 'arithmetic operation overflowed': {}:{}",
-                            tokens.filename(), tokens.token[tokens.idx()].line));
+                            tokens.filename(), tokens.token[tokens.idx()].line).into());
                 }
             } else {
                 // CLO, CLZ
@@ -47,15 +48,15 @@ pub fn eval_arithmetic_hilo(registers: &mut[i32], tokens: &mut Tokens,
     hi: &mut u32, lo: &mut u32, kind: InstructionKind)
     -> Result<()>
 {
-    tokens.consume().unwrap();
+    tokens.consume().ok_or(CONSUME_ERR)?;
     let rd_idx = tokens.expect_register()?;
-    tokens.consume().unwrap();
+    tokens.consume().ok_or(CONSUME_ERR)?;
     let rs_idx = tokens.expect_register()?;
 
     match kind {
         InstructionKind::DIV => {
-            if tokens.next().unwrap().kind != TokenKind::EOL {
-                tokens.consume().unwrap();
+            if tokens.next().ok_or(CONSUME_ERR)?.kind != TokenKind::EOL {
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rt_idx = tokens.expect_register()?;
                 registers[rd_idx] = registers[rs_idx] / registers[rt_idx];
             } else {
@@ -64,8 +65,8 @@ pub fn eval_arithmetic_hilo(registers: &mut[i32], tokens: &mut Tokens,
             }
         },
         InstructionKind::DIVU => {
-            if tokens.next().unwrap().kind != TokenKind::EOL {
-                tokens.consume().unwrap();
+            if tokens.next().ok_or(CONSUME_ERR)?.kind != TokenKind::EOL {
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rt_idx = tokens.expect_register()?;
                 registers[rd_idx] = (registers[rs_idx] as u32 / registers[rt_idx] as u32) as i32;
             } else {
@@ -103,7 +104,7 @@ pub fn eval_arithmetic_hilo(registers: &mut[i32], tokens: &mut Tokens,
             *lo -= ans as u32;
             *hi -= (ans >> 32) as u32;
         },
-        _ => return Err(format!("eval_arithmetic_hilo(): invalid TokenKind: {:?}", kind)),
+        _ => return Err(format!("eval_arithmetic_hilo(): invalid TokenKind: {:?}", kind).into()),
     }
 
     Ok(())
@@ -114,10 +115,10 @@ pub fn eval_constant<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
 where
     F: Fn(i32) -> i32,
 {
-    tokens.consume().unwrap();
+    tokens.consume().ok_or(CONSUME_ERR)?;
     let register_idx = tokens.expect_register()?;
     registers[register_idx] = {
-        tokens.consume().unwrap();
+        tokens.consume().ok_or(CONSUME_ERR)?;
         let integer = tokens.expect_integer()?;
         fun(integer)
     };
@@ -130,11 +131,11 @@ pub fn eval_comparison<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
 where
     F: Fn(i32, i32) -> bool,
 {
-    tokens.consume().unwrap();
+    tokens.consume().ok_or(CONSUME_ERR)?;
     if let Ok(rd_idx) = tokens.expect_register() {
-        tokens.consume().unwrap();
+        tokens.consume().ok_or(CONSUME_ERR)?;
         if let Ok(rs_idx) = tokens.expect_register() {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(rt_idx) = tokens.expect_register() {
                 registers[rd_idx] = if fun(registers[rs_idx], registers[rt_idx]) {
                     1
@@ -160,18 +161,18 @@ pub fn eval_branch<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
 where
     F: Fn(i32, i32) -> bool,
 {
-    tokens.consume().unwrap();
+    tokens.consume().ok_or(CONSUME_ERR)?;
     if let Ok(rsrc1_idx) = tokens.expect_register() {
-        tokens.consume().unwrap();
+        tokens.consume().ok_or(CONSUME_ERR)?;
         if let Ok(rsrc2_idx) = tokens.expect_register() {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             if fun(registers[rsrc1_idx], registers[rsrc2_idx]) {
                 let idx = tokens.expect_label()?;
                 tokens.goto(idx-1);
                 return Ok(true);
             }
         } else if let Ok(num) = tokens.expect_integer() {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             if fun(registers[rsrc1_idx], num) {
                 let idx = tokens.expect_label()?;
                 tokens.goto(idx-1);
@@ -201,30 +202,30 @@ pub fn eval_jump(registers: &mut [i32], tokens: &mut Tokens, kind: InstructionKi
 {
     match kind {
         InstructionKind::J => {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             let idx = tokens.expect_label()?;
             tokens.goto(idx-1);
         },
         InstructionKind::JAL => {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             let idx = tokens.expect_label()?;
             registers[31] = tokens.idx() as i32 + 1;  // $ra
             tokens.goto(idx-1);
         },
         InstructionKind::JR => {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             let idx = tokens.expect_register()?;
             tokens.goto(registers[idx] as usize);
         },
         InstructionKind::JALR => {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             let rs_idx = tokens.expect_register()?;
             tokens.consume();
             let rd_idx = tokens.expect_register()?;
             registers[rd_idx] = tokens.idx() as i32 + 1;
             tokens.goto(rs_idx-1);
         },
-        _ => return Err(format!("eval_jump(): invalid InstructionKind: {:?}", kind)),
+        _ => return Err(format!("eval_jump(): invalid InstructionKind: {:?}", kind).into()),
     }
 
     Ok(())
@@ -234,9 +235,9 @@ pub fn eval_load(registers: &mut [i32], tokens: &mut Tokens,
     data: &[u8], stack: &[u8], byte: usize, se: SignExtension)
     -> Result<()>
 {
-    tokens.consume().unwrap();
+    tokens.consume().ok_or(CONSUME_ERR)?;
     let register_idx = tokens.expect_register()?;
-    tokens.consume().unwrap();
+    tokens.consume().ok_or(CONSUME_ERR)?;
     let idx = if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
         (registers[r_idx] + s_idx) as isize
     } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
@@ -253,9 +254,9 @@ pub fn eval_store(registers: &mut [i32], tokens: &mut Tokens,
     data: &mut Vec<u8>, stack: &mut Vec<u8>, byte: usize)
     -> Result<()>
 {
-    tokens.consume().unwrap();
+    tokens.consume().ok_or(CONSUME_ERR)?;
     let register_idx = tokens.expect_register()?;
-    tokens.consume().unwrap();
+    tokens.consume().ok_or(CONSUME_ERR)?;
     if let Ok((r_idx, append)) = tokens.expect_memory() {
         let idx = registers[r_idx] + append;
 
@@ -301,7 +302,7 @@ pub fn eval_myown(registers: &[i32], tokens: &mut Tokens,
             println!();
         },
         InstructionKind::PRTI => {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
                 print!("{}", registers[r_idx]);
             } else if let Ok(num) = tokens.expect_integer() {
@@ -319,7 +320,7 @@ pub fn eval_myown(registers: &[i32], tokens: &mut Tokens,
             let _ = std::io::stdout().flush();
         },
         InstructionKind::PRTH => {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
                 print!("{:x}", registers[r_idx]);
             } else if let Ok(num) = tokens.expect_integer() {
@@ -337,7 +338,7 @@ pub fn eval_myown(registers: &[i32], tokens: &mut Tokens,
             let _ = std::io::stdout().flush();
         },
         InstructionKind::PRTX => {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
                 print!("0x{:x}", registers[r_idx]);
             } else if let Ok(num) = tokens.expect_integer() {
@@ -355,7 +356,7 @@ pub fn eval_myown(registers: &[i32], tokens: &mut Tokens,
             let _ = std::io::stdout().flush();
         },
         InstructionKind::PRTC => {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
                 print!("{}", registers[r_idx] as u8 as char);
             } else if let Ok(d_idx) = tokens.expect_address() {
@@ -373,7 +374,7 @@ pub fn eval_myown(registers: &[i32], tokens: &mut Tokens,
             let _ = std::io::stdout().flush();
         },
         InstructionKind::PRTS => {
-            tokens.consume().unwrap();
+            tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
                 print!("{}", get_string(&data, &stack, registers[r_idx])?);
             } else if let Ok(d_idx) = tokens.expect_address() {
@@ -390,7 +391,7 @@ pub fn eval_myown(registers: &[i32], tokens: &mut Tokens,
             }
             let _ = std::io::stdout().flush();
         },
-        _ => return Err(format!("eval_myown(): invalid TokenKind: {:?}", kind)),
+        _ => return Err(format!("eval_myown(): invalid TokenKind: {:?}", kind).into()),
     }
 
     Ok(())

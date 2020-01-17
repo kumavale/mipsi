@@ -2,6 +2,7 @@ extern crate rand;
 use rand::Rng;
 
 use std::io::Write;
+use std::error::Error;
 
 use super::token::*;
 
@@ -16,7 +17,7 @@ mod test;
 pub fn parse(mut tokens: &mut Tokens,
     mut registers: &mut [i32], mut hi: &mut u32, mut lo: &mut u32,
     mut data: &mut Vec<u8>, mut stack: &mut Vec<u8>)
--> Result<(), String> {
+-> Result<(), Box<dyn Error>> {
 
     data_analysis(&mut tokens, &mut data);
     //println!("data: {:?}", data);
@@ -104,20 +105,20 @@ pub fn parse(mut tokens: &mut Tokens,
                     Some(cnt)
                 })?,
             InstructionKind::ROR => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rd_idx = tokens.expect_register()?;
                 registers[rd_idx] = {
-                    tokens.consume().unwrap();
+                    tokens.consume().ok_or(CONSUME_ERR)?;
                     let rs_idx = tokens.expect_register()?;
                     let rs = registers[rs_idx];
-                    tokens.consume().unwrap();
+                    tokens.consume().ok_or(CONSUME_ERR)?;
                     let rt = {
                         if let Ok(rt_idx) = tokens.expect_register() {
                             registers[rt_idx]
                         } else if let Ok(num) = tokens.expect_integer() {
                             num
                         } else {
-                            return Err("ROR: invalid token".to_string());
+                            return Err("ROR: invalid token".into());
                         }
                     };
                     registers[1] = (rs as u32 >> rt) as i32;
@@ -126,20 +127,20 @@ pub fn parse(mut tokens: &mut Tokens,
                 };
             },
             InstructionKind::ROL => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rd_idx = tokens.expect_register()?;
                 registers[rd_idx] = {
-                    tokens.consume().unwrap();
+                    tokens.consume().ok_or(CONSUME_ERR)?;
                     let rs_idx = tokens.expect_register()?;
                     let rs = registers[rs_idx];
-                    tokens.consume().unwrap();
+                    tokens.consume().ok_or(CONSUME_ERR)?;
                     let rt = {
                         if let Ok(rt_idx) = tokens.expect_register() {
                             registers[rt_idx]
                         } else if let Ok(num) = tokens.expect_integer() {
                             num
                         } else {
-                            return Err("ROL: invalid token".to_string());
+                            return Err("ROL: invalid token".into());
                         }
                     };
                     registers[1] = rs << rt;
@@ -151,10 +152,10 @@ pub fn parse(mut tokens: &mut Tokens,
             InstructionKind::NOR =>
                 eval_arithmetic(&mut registers, &mut tokens, |x, y| Some(!(x | y)))?,
             InstructionKind::NOT => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rd_idx = tokens.expect_register()?;
                 registers[rd_idx] = {
-                    tokens.consume().unwrap();
+                    tokens.consume().ok_or(CONSUME_ERR)?;
                     let register_idx = tokens.expect_register()?;
                     !registers[register_idx]
                 };
@@ -233,9 +234,9 @@ pub fn parse(mut tokens: &mut Tokens,
             InstructionKind::BNEZ =>
                 if eval_branch(&mut registers, &mut tokens, |x, y| x != y)? { continue; },
             InstructionKind::BGEZAL => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let r_idx = tokens.expect_register()?;
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let l_idx = tokens.expect_label()?;
                 registers[31] = tokens.idx() as i32 + 1;  // $ra
                 if 0 <= registers[r_idx] {
@@ -243,9 +244,9 @@ pub fn parse(mut tokens: &mut Tokens,
                 }
             },
             InstructionKind::BLTZAL => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let r_idx = tokens.expect_register()?;
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let l_idx = tokens.expect_label()?;
                 registers[31] = tokens.idx() as i32 + 1;  // $ra
                 if registers[r_idx] < 0 {
@@ -265,9 +266,9 @@ pub fn parse(mut tokens: &mut Tokens,
 
             // Load
             InstructionKind::LA => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let register_idx = tokens.expect_register()?;
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 registers[register_idx] = {
                     if let Ok(data_idx) = tokens.expect_address() {
                         data_idx as i32
@@ -297,49 +298,49 @@ pub fn parse(mut tokens: &mut Tokens,
 
             // Transfer
             InstructionKind::MOVE => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rd_idx = tokens.expect_register()?;
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rs_idx = tokens.expect_register()?;
                 registers[rd_idx] = registers[rs_idx];
             },
             InstructionKind::MFHI => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let r_idx = tokens.expect_register()?;
                 registers[r_idx] = *hi as i32;
             },
             InstructionKind::MFLO => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let r_idx = tokens.expect_register()?;
                 registers[r_idx] = *lo as i32;
             },
             InstructionKind::MTHI => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let r_idx = tokens.expect_register()?;
                 *hi = registers[r_idx] as u32;
             },
             InstructionKind::MTLO => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let r_idx = tokens.expect_register()?;
                 *lo = registers[r_idx] as u32;
             },
             InstructionKind::MOVN => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rd_idx = tokens.expect_register()?;
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rs_idx = tokens.expect_register()?;
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rt_idx = tokens.expect_register()?;
                 if registers[rt_idx] != 0 {
                     registers[rd_idx] = registers[rs_idx];
                 }
             },
             InstructionKind::MOVZ => {
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rd_idx = tokens.expect_register()?;
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rs_idx = tokens.expect_register()?;
-                tokens.consume().unwrap();
+                tokens.consume().ok_or(CONSUME_ERR)?;
                 let rt_idx = tokens.expect_register()?;
                 if registers[rt_idx] == 0 {
                     registers[rd_idx] = registers[rs_idx];
@@ -375,7 +376,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         std::io::stdin().read_line(&mut input).unwrap();
                         let mut index = registers[4] as usize - 1;
                         if data.len() < index + input.len() {
-                            return Err(format!("not enough space for .data: {}", registers[4]));
+                            return Err(format!("not enough space for .data: {}", registers[4]).into());
                         }
                         for (i, ch) in input.into_bytes().iter().enumerate() {
                             if i >= registers[5] as usize {
@@ -418,7 +419,7 @@ pub fn parse(mut tokens: &mut Tokens,
                         let rnd = rand::thread_rng().gen_range(0, registers[5]);  // $a1
                         registers[4] = rnd;
                     },
-                    _ => return Err(format!("SYSCALL: invalid code: {}", registers[2])),
+                    _ => return Err(format!("SYSCALL: invalid code: {}", registers[2]).into()),
                 }
             },
             InstructionKind::NOP => (),  // Do nothing
