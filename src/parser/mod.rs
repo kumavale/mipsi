@@ -5,6 +5,7 @@ use std::io::Write;
 use std::error::Error;
 
 use super::token::*;
+use super::token::register::Registers;
 
 pub mod display;
 use crate::parser::display::*;
@@ -15,7 +16,7 @@ mod test;
 
 #[allow(clippy::cognitive_complexity)]
 pub fn parse(mut tokens: &mut Tokens,
-    mut registers: &mut [i32], mut hi: &mut u32, mut lo: &mut u32,
+    mut registers: &mut Registers, mut hi: &mut u32, mut lo: &mut u32,
     mut data: &mut Vec<u8>, mut stack: &mut Vec<u8>)
 -> Result<(), Box<dyn Error>> {
 
@@ -551,9 +552,9 @@ pub fn get_string(data: &[u8], stack: &[u8], index: i32)
     }
 }
 
-fn reset(registers: &mut &mut[i32], hi: &mut &mut u32, lo: &mut &mut u32,
+fn reset(registers: &mut &mut Registers, hi: &mut &mut u32, lo: &mut &mut u32,
     data: &mut &mut Vec<u8>, stack: &mut &mut Vec<u8>, tokens: &mut &mut Tokens) {
-    for r in registers.iter_mut() { *r = 0; }
+    **registers = Registers::default();
     **hi = 0;
     **lo = 0;
     data.clear();

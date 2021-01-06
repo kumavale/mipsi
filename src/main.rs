@@ -7,6 +7,7 @@ use std::env;
 use std::io::{BufRead, BufReader};
 
 use token::*;
+use token::register::Registers;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -35,7 +36,7 @@ fn main() {
             }
         }
 
-        let mut registers: [i32; 32] = [0; 32];
+        let mut registers = Registers::default();
         let mut hi: u32 = 0;
         let mut lo: u32 = 0;
         let mut data:  Vec<u8> = Vec::new();

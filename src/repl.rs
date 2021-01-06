@@ -1,6 +1,7 @@
 use std::io::{stdin, stdout, Write};
 
 use super::token::Tokens;
+use super::token::register::Registers;
 use super::lexer::tokenize;
 use super::parser::{parse, display::*};
 
@@ -8,7 +9,7 @@ pub fn run() {
     let mut tokens: Tokens = Tokens::new();
     let mut number_of_lines: u32 = 0;
 
-    let mut registers: [i32; 32] = [0; 32];
+    let mut registers = Registers::default();
     let mut hi: u32 = 0;
     let mut lo: u32 = 0;
     let mut data:  Vec<u8> = Vec::new();

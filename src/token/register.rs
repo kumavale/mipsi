@@ -1,3 +1,4 @@
+use std::ops::{Index, IndexMut};
 
 #[derive(Clone, Debug, PartialEq)]
 #[allow(non_camel_case_types)]
@@ -14,6 +15,28 @@ pub enum RegisterKind {
     sp,                              //    29: Stack Pointer
     fp,                              //    30: Frame Pointer
     ra,                              //    31: Return Address
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Registers {
+    regs: [i32; 32],
+}
+
+impl Index<usize> for Registers {
+    type Output = i32;
+
+    fn index(&self, idx: usize) -> &Self::Output {
+        match idx {
+            0 => &0,
+            _ => &self.regs[idx],
+        }
+    }
+}
+
+impl IndexMut<usize> for Registers {
+    fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
+        &mut self.regs[idx]
+    }
 }
 
 // [ Consider... ]

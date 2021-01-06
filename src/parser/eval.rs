@@ -1,4 +1,5 @@
 use super::super::token::*;
+use super::super::token::register::Registers;
 use super::super::parser::{SignExtension, get_int, get_string};
 
 use std::io::Write;
@@ -6,7 +7,7 @@ use std::error::Error;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
-pub fn eval_arithmetic<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
+pub fn eval_arithmetic<F>(registers: &mut Registers, tokens: &mut Tokens, fun: F)
     -> Result<()>
 where
     F: Fn(i32, i32) -> Option<i32>,
@@ -44,7 +45,7 @@ where
     Ok(())
 }
 
-pub fn eval_arithmetic_hilo(registers: &mut[i32], tokens: &mut Tokens,
+pub fn eval_arithmetic_hilo(registers: &mut Registers, tokens: &mut Tokens,
     hi: &mut u32, lo: &mut u32, kind: InstructionKind)
     -> Result<()>
 {
@@ -110,7 +111,7 @@ pub fn eval_arithmetic_hilo(registers: &mut[i32], tokens: &mut Tokens,
     Ok(())
 }
 
-pub fn eval_constant<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
+pub fn eval_constant<F>(registers: &mut Registers, tokens: &mut Tokens, fun: F)
     -> Result<()>
 where
     F: Fn(i32) -> i32,
@@ -126,7 +127,7 @@ where
     Ok(())
 }
 
-pub fn eval_comparison<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
+pub fn eval_comparison<F>(registers: &mut Registers, tokens: &mut Tokens, fun: F)
     -> Result<()>
 where
     F: Fn(i32, i32) -> bool,
@@ -156,7 +157,7 @@ where
     Ok(())
 }
 
-pub fn eval_branch<F>(registers: &mut [i32], tokens: &mut Tokens, fun: F)
+pub fn eval_branch<F>(registers: &mut Registers, tokens: &mut Tokens, fun: F)
     -> Result<bool>
 where
     F: Fn(i32, i32) -> bool,
@@ -197,7 +198,7 @@ where
 }
 
 /// Return: can continue
-pub fn eval_jump(registers: &mut [i32], tokens: &mut Tokens, kind: InstructionKind)
+pub fn eval_jump(registers: &mut Registers, tokens: &mut Tokens, kind: InstructionKind)
     -> Result<()>
 {
     match kind {
@@ -231,7 +232,7 @@ pub fn eval_jump(registers: &mut [i32], tokens: &mut Tokens, kind: InstructionKi
     Ok(())
 }
 
-pub fn eval_load(registers: &mut [i32], tokens: &mut Tokens,
+pub fn eval_load(registers: &mut Registers, tokens: &mut Tokens,
     data: &[u8], stack: &[u8], byte: usize, se: SignExtension)
     -> Result<()>
 {
@@ -250,7 +251,7 @@ pub fn eval_load(registers: &mut [i32], tokens: &mut Tokens,
     Ok(())
 }
 
-pub fn eval_store(registers: &mut [i32], tokens: &mut Tokens,
+pub fn eval_store(registers: &mut Registers, tokens: &mut Tokens,
     data: &mut Vec<u8>, stack: &mut Vec<u8>, byte: usize)
     -> Result<()>
 {
@@ -293,7 +294,7 @@ pub fn eval_store(registers: &mut [i32], tokens: &mut Tokens,
     Ok(())
 }
 
-pub fn eval_myown(registers: &[i32], tokens: &mut Tokens,
+pub fn eval_myown(registers: &Registers, tokens: &mut Tokens,
     data: &[u8], stack: &[u8], kind: InstructionKind)
     -> Result<()>
 {

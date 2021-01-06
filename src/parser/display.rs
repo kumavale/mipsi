@@ -1,7 +1,8 @@
 use std::io::Write;
+use crate::token::register::Registers;
 
 // Display all registers
-pub fn display_register(registers: &[i32]) {
+pub fn display_register(registers: &Registers) {
     println!("\n====[ REGISTER ]================================================");
     for i in 0..8 {
         for j in 0..4 {
