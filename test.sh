@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Run `cargo test`
+echo ">> cargo test"
+cargo test || exit 1;
+
 # Run all examples
 echo ">> cargo build --release"
 cargo build --release

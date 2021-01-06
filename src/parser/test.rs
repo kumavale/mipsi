@@ -3,7 +3,7 @@
 #[cfg(test)]
 fn test_parse() {
     use super::*;
-    use crate::token::register::RegisterKind;
+    use crate::token::register::*;
 
     let mut tokens: Tokens = Tokens::new();
 
@@ -64,7 +64,7 @@ fn test_parse() {
     tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 55, 0);
     tokens.push(TokenKind::EOL, 56, 0);
 
-    let mut registers: [i32; 32] = [0; 32];
+    let mut registers = Registers::default();
     let mut hi: u32 = 0;
     let mut lo: u32 = 0;
     let mut data:  Vec<u8> = Vec::new();
