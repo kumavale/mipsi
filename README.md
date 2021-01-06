@@ -17,10 +17,18 @@ cargo run --release [file...]
 ( e.g. `TOKEN_TRACE=1 REGISTER_TRACE=1 cargo run --release file.asm` )
 
 ##### ENVIRONMENT VARIABLES
-* TOKEN_TRACE  
-* DATA_TRACE  
-* STACK_TRACE  
-* REGISTER_TRACE  
+- TOKEN_TRACE  
+- DATA_TRACE  
+- STACK_TRACE  
+- REGISTER_TRACE  
+
+### REPL command
+- exit  ... to exit
+- help  ... display this message
+- dispt ... display tokens
+- dispd ... display data
+- disps ... display stack
+- dispr ... display register
 
 
 ## Supported

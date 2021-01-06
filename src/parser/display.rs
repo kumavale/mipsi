@@ -1,6 +1,16 @@
 use std::io::Write;
 use crate::token::register::Registers;
 
+// Display help
+pub fn display_help() {
+    println!("exit  ... to exit");
+    println!("help  ... display this message");
+    println!("dispt ... display tokens");
+    println!("dispd ... display data");
+    println!("disps ... display stack");
+    println!("dispr ... display register");
+}
+
 // Display all registers
 pub fn display_register(registers: &Registers) {
     println!("\n====[ REGISTER ]================================================");

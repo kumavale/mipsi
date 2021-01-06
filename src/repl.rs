@@ -16,7 +16,8 @@ pub fn run() {
     let mut stack: Vec<u8> = vec![0];
 
     println!("Welcome mipsi REPL!");
-    println!("Type `exit` or ^C to exit\n");
+    println!("Type `exit` or ^C to exit");
+    println!("Type `help` to display help message\n");
 
     loop {
         print!("> ");
@@ -30,10 +31,11 @@ pub fn run() {
 
         match &*input {
             "exit"  => break,
-            "DISPT"|"dispt" => { println!("{:?}", tokens.token); continue; }, // TODO provisional
-            "DISPD"|"dispd" => { display_data_per_4byte(&data);  continue; },
-            "DISPS"|"disps" => { display_stack(&stack);          continue; },
-            "DISPR"|"dispr" => { display_register(&registers);   continue; },
+            "help"  => { display_help();                 continue; },
+            "dispt" => { println!("{:?}", tokens.token); continue; }, // TODO provisional
+            "dispd" => { display_data_per_4byte(&data);  continue; },
+            "disps" => { display_stack(&stack);          continue; },
+            "dispr" => { display_register(&registers);   continue; },
             "" => continue,
             _ => (),
         }
