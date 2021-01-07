@@ -1,4 +1,5 @@
 use super::super::token::*;
+use super::super::token::memory::*;
 
 impl Tokens {
     pub fn new() -> Self {
@@ -181,10 +182,9 @@ impl Tokens {
         if let TokenKind::ADDRESS(s) = &self.token[self.idx].kind {
             let line = self.token[self.idx].line;
             for t in &self.token {
-                if let TokenKind::LABEL(name, _, idx) = &t.kind {
+                if let TokenKind::LABEL(name, _, Some(idx)) = &t.kind {
                     if *s == *name {
-                        return Ok((*idx)
-                            .ok_or_else(|| format!("{}: invalid address: {}", line, s))?);
+                        return Ok(*idx);
                     }
                 }
             }
@@ -245,7 +245,7 @@ impl Tokens {
             for t in &self.token {
                 if let TokenKind::LABEL(name, _, Some(d_i)) = &t.kind {
                     if *s == *name {
-                        return Ok((*r_i, *d_i));
+                        return Ok((*r_i, *d_i + STATIC_DATA as usize));
                     }
                 }
             }

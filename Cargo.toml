@@ -1,5 +1,5 @@
 [package]
-name = "vsmi"
+name = "mipsi"
 version = "0.1.0"
 authors = ["kmgy"]
 edition = "2018"

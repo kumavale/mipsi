@@ -64,13 +64,8 @@ fn test_parse() {
     tokens.push(TokenKind::REGISTER(RegisterKind::v0,  2), 55, 0);
     tokens.push(TokenKind::EOL, 56, 0);
 
-    let mut registers = Registers::default();
-    let mut hi: u32 = 0;
-    let mut lo: u32 = 0;
-    let mut data:  Vec<u8> = Vec::new();
-    let mut stack: Vec<u8> = vec![0];
+    let mut memory = Memory::default();
 
-    parse(&mut tokens, &mut registers, &mut hi, &mut lo, &mut data, &mut stack)
-        .unwrap();
+    parse(&mut tokens, &mut memory).unwrap();
 }
 

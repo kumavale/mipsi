@@ -159,7 +159,7 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                 _ =>
                     if is_label(&word) {
                         let mut identifier = (*word).to_string();
-                        identifier.remove(identifier.len()-1);  // Delete ':'
+                        identifier.pop();  // Delete ':'
                         tokens.add_address(identifier.clone(), tokens.len());
                         TokenKind::LABEL(identifier, tokens.len(), None)
                     } else if is_indicate(&word) {
@@ -324,12 +324,12 @@ fn is_data_address(word: &str) -> Result<(RegisterKind, usize, String), String> 
 
             while let Some(c) = s_chars.next() {
                 if let 'A'..='Z' | 'a'..='z' | '_' | '0'..='9' = c {
-                    label = format!("{}{}", label, c);
+                    label.push(c);
                 } else if c == '(' {
                     let mut reg = String::new();
                     #[allow(clippy::while_let_on_iterator)]
                     while let Some(c) = s_chars.next() {
-                        reg = format!("{}{}", reg, c);
+                        reg.push(c);
                     }
                     let (reg, idx) = is_register(&reg)?;
                     return Ok((reg, idx, label));

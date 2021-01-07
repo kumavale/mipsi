@@ -7,7 +7,7 @@ use std::env;
 use std::io::{BufRead, BufReader};
 
 use token::*;
-use token::register::Registers;
+use token::memory::Memory;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -36,13 +36,9 @@ fn main() {
             }
         }
 
-        let mut registers = Registers::default();
-        let mut hi: u32 = 0;
-        let mut lo: u32 = 0;
-        let mut data:  Vec<u8> = Vec::new();
-        let mut stack: Vec<u8> = Vec::new();
+        let mut memory = Memory::default();
 
-        parser::parse(&mut tokens, &mut registers, &mut hi, &mut lo, &mut data, &mut stack).unwrap();
+        parser::parse(&mut tokens, &mut memory).unwrap();
 
         //println!("{:?}", tokens);
         //parser::display::display_data_per_4byte(&data);

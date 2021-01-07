@@ -46,10 +46,11 @@ where
     Ok(())
 }
 
-pub fn eval_arithmetic_hilo(registers: &mut Registers, tokens: &mut Tokens,
-    hi: &mut u32, lo: &mut u32, kind: InstructionKind)
-    -> Result<()>
-{
+pub fn eval_arithmetic_hilo(memory: &mut Memory, tokens: &mut Tokens, kind: InstructionKind) -> Result<()> {
+    let registers = &mut memory.registers;
+    let hi        = &mut memory.hi;
+    let lo        = &mut memory.lo;
+
     tokens.consume().ok_or(CONSUME_ERR)?;
     let rd_idx = tokens.expect_register()?;
     tokens.consume().ok_or(CONSUME_ERR)?;
@@ -233,72 +234,73 @@ pub fn eval_jump(registers: &mut Registers, tokens: &mut Tokens, kind: Instructi
     Ok(())
 }
 
-pub fn eval_load(registers: &mut Registers, tokens: &mut Tokens,
-    data: &[u8], stack: &[u8], byte: usize, se: SignExtension)
-    -> Result<()>
-{
+pub fn eval_load(memory: &mut Memory, tokens: &mut Tokens, byte: usize, se: SignExtension) -> Result<()> {
     tokens.consume().ok_or(CONSUME_ERR)?;
     let register_idx = tokens.expect_register()?;
     tokens.consume().ok_or(CONSUME_ERR)?;
     let idx = if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-        registers[r_idx] as u32 + s_idx
+        memory.registers[r_idx] as u32 + s_idx
     } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-        d_idx as u32 + registers[r_idx] as u32
+        d_idx as u32 + memory.registers[r_idx] as u32
     } else {
         tokens.expect_address()? as u32
     };
-    registers[register_idx] = get_int(&data, &stack, idx, byte, se)?;
+    memory.registers[register_idx] = get_int(&memory, idx, byte, se)?;
 
     Ok(())
 }
 
-pub fn eval_store(registers: &mut Registers, tokens: &mut Tokens,
-    data: &mut Vec<u8>, stack: &mut Vec<u8>, byte: usize)
-    -> Result<()>
-{
+pub fn eval_store(memory: &mut Memory, tokens: &mut Tokens, byte: usize) -> Result<()> {
     tokens.consume().ok_or(CONSUME_ERR)?;
     let register_idx = tokens.expect_register()?;
     tokens.consume().ok_or(CONSUME_ERR)?;
     if let Ok((r_idx, append)) = tokens.expect_memory() {
-        let idx = registers[r_idx] as u32 + append;
+        let idx = memory.registers[r_idx] as u32 + append;
 
         // data
-        if idx < DYNAMIC_DATA {
-            let index = (idx - 1) as usize;
-            for i in 0..byte {
-                data[index+i] = (registers[register_idx] >> ((byte-1-i)*8)) as u8;
+        if idx < DYNAMIC_DATA_EXIT {
+            if idx < DYNAMIC_DATA{
+                // static data
+                let index = (idx - if STATIC_DATA <= idx { STATIC_DATA } else { 0 } - 1) as usize;
+                for i in 0..byte {
+                    memory.static_data[index+i] = (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8;
+                }
+            } else {
+                // dynamic data
+                let index = (idx - DYNAMIC_DATA) as usize;
+                for i in 0..byte {
+                    memory.dynamic_data[index+i] = (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8;
+                }
             }
 
         // stack
         } else {
             let index = (STACK_SEGMENT - idx) as usize;
-            if stack.len() <= index+byte {
-                stack.resize(index+byte+1, 0);
+            if memory.stack.len() <= index+byte {
+                memory.stack.resize(index+byte+1, 0);
             }
             for i in 0..byte {
-                stack[index+i] = (registers[register_idx] >> ((byte-1-i)*8)) as u8;
+                memory.stack[index+i] = (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8;
             }
         }
     } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-        let index = registers[r_idx] as usize + d_idx - 1;
+        let index = memory.registers[r_idx] as usize + d_idx - 1;
         for i in 0..byte {
-            data[index+i] = (registers[register_idx] >> ((byte-1-i)*8)) as u8;
+            memory.static_data[index - if STATIC_DATA as usize <= index { STATIC_DATA as usize } else { 0 } + i]
+                = (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8;
         }
     } else {
-        let data_idx = tokens.expect_address()?;
-        let index = data_idx - 1;
+        let index = tokens.expect_address()? - 1;
         for i in 0..byte {
-            data[index+i] = (registers[register_idx] >> ((byte-1-i)*8)) as u8;
+            memory.static_data[index - if STATIC_DATA as usize <= index { STATIC_DATA as usize } else { 0 } + i]
+                = (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8;
         }
     }
 
     Ok(())
 }
 
-pub fn eval_myown(registers: &Registers, tokens: &mut Tokens,
-    data: &[u8], stack: &[u8], kind: InstructionKind)
-    -> Result<()>
-{
+pub fn eval_myown(memory: &Memory, tokens: &mut Tokens, kind: InstructionKind) -> Result<()> {
     match kind {
         InstructionKind::PRTN => {
             println!();
@@ -306,69 +308,69 @@ pub fn eval_myown(registers: &Registers, tokens: &mut Tokens,
         InstructionKind::PRTI => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                print!("{}", registers[r_idx]);
+                print!("{}", memory.registers[r_idx]);
             } else if let Ok(num) = tokens.expect_integer() {
                 print!("{}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-                let idx = registers[r_idx] as u32 + s_idx;
-                print!("{}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
+                let idx = memory.registers[r_idx] as u32 + s_idx;
+                print!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                let idx = (registers[r_idx] as usize + d_idx) as u32;
-                print!("{}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
+                let idx = (memory.registers[r_idx] as usize + d_idx) as u32;
+                print!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else {
                 let idx = tokens.expect_address()? as u32;
-                print!("{}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
+                print!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
         },
         InstructionKind::PRTH => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                print!("{:x}", registers[r_idx]);
+                print!("{:x}", memory.registers[r_idx]);
             } else if let Ok(num) = tokens.expect_integer() {
                 print!("{:x}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-                let idx = registers[r_idx] as u32 + s_idx;
-                print!("{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
+                let idx = memory.registers[r_idx] as u32 + s_idx;
+                print!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                let idx = registers[r_idx] as u32 + d_idx as u32;
-                print!("{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
+                let idx = memory.registers[r_idx] as u32 + d_idx as u32;
+                print!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else {
                 let idx = tokens.expect_address()? as u32;
-                print!("{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
+                print!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
         },
         InstructionKind::PRTX => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                print!("0x{:x}", registers[r_idx]);
+                print!("0x{:x}", memory.registers[r_idx]);
             } else if let Ok(num) = tokens.expect_integer() {
                 print!("0x{:x}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-                let idx = registers[r_idx] as u32 + s_idx;
-                print!("0x{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
+                let idx = memory.registers[r_idx] as u32 + s_idx;
+                print!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                let idx = registers[r_idx] as u32 + d_idx as u32;
-                print!("0x{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
+                let idx = memory.registers[r_idx] as u32 + d_idx as u32;
+                print!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else {
                 let idx = tokens.expect_address()? as u32;
-                print!("0x{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
+                print!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
         },
         InstructionKind::PRTC => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                print!("{}", registers[r_idx] as u8 as char);
+                print!("{}", memory.registers[r_idx] as u8 as char);
             } else if let Ok(d_idx) = tokens.expect_address() {
-                print!("{}", data[d_idx-1] as char);
+                print!("{}", memory.static_data[d_idx-1] as char);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-                let idx = registers[r_idx] as u32 + s_idx;
-                print!("{}", &get_string(&data, &stack, idx)?[..1]);
+                let idx = memory.registers[r_idx] as u32 + s_idx;
+                print!("{}", &get_string(&memory, idx)?[..1]);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                let idx = (registers[r_idx] as usize + d_idx) as usize;
-                print!("{}", data[idx-1] as char);
+                let idx = (memory.registers[r_idx] as usize + d_idx) as usize;
+                print!("{}", memory.static_data[idx-1] as char);
             } else {
                 let ch = tokens.expect_integer()? as u8 as char;
                 print!("{}", ch);
@@ -378,15 +380,15 @@ pub fn eval_myown(registers: &Registers, tokens: &mut Tokens,
         InstructionKind::PRTS => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                print!("{}", get_string(&data, &stack, registers[r_idx] as u32)?);
+                print!("{}", get_string(&memory, memory.registers[r_idx] as u32)?);
             } else if let Ok(d_idx) = tokens.expect_address() {
-                print!("{}", get_string(&data, &stack, d_idx as u32)?);
+                print!("{}", get_string(&memory, d_idx as u32)?);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-                let idx = registers[r_idx] as u32 + s_idx;
-                print!("{}", get_string(&data, &stack, idx)?);
+                let idx = memory.registers[r_idx] as u32 + s_idx;
+                print!("{}", get_string(&memory, idx)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                let idx = registers[r_idx] as u32 + d_idx as u32;
-                print!("{}", get_string(&data, &stack, idx)?);
+                let idx = memory.registers[r_idx] as u32 + d_idx as u32;
+                print!("{}", get_string(&memory, idx)?);
             } else {
                 let s = tokens.expect_literal()?;
                 print!("{}", s);

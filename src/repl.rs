@@ -1,19 +1,14 @@
 use std::io::{stdin, stdout, Write};
 
 use super::token::Tokens;
-use super::token::register::Registers;
+use super::token::memory::Memory;
 use super::lexer::tokenize;
 use super::parser::{parse, display::*};
 
 pub fn run() {
     let mut tokens: Tokens = Tokens::new();
     let mut number_of_lines: u32 = 0;
-
-    let mut registers = Registers::default();
-    let mut hi: u32 = 0;
-    let mut lo: u32 = 0;
-    let mut data:  Vec<u8> = Vec::new();
-    let mut stack: Vec<u8> = vec![0];
+    let mut memory = Memory::default();
 
     println!("Welcome mipsi REPL!");
     println!("Type `exit` or ^C to exit");
@@ -31,11 +26,11 @@ pub fn run() {
 
         match &*input {
             "exit"  => break,
-            "help"  => { display_help();                 continue; },
-            "dispt" => { println!("{:?}", tokens.token); continue; }, // TODO provisional
-            "dispd" => { display_data_per_4byte(&data);  continue; },
-            "disps" => { display_stack(&stack);          continue; },
-            "dispr" => { display_register(&registers);   continue; },
+            "help"  => { display_help();                               continue; },
+            "dispt" => { println!("{:?}", tokens.token);               continue; }, // TODO provisional
+            "dispd" => { display_data_per_4byte(&memory.static_data);  continue; },
+            "disps" => { display_stack(&memory.stack);                 continue; },
+            "dispr" => { display_register(&memory.registers);          continue; },
             "" => continue,
             _ => (),
         }
@@ -50,8 +45,7 @@ pub fn run() {
         }
 
         if 0 < tokens.len() {
-            let result = parse(&mut tokens, &mut registers, &mut hi, &mut lo,
-                &mut data, &mut stack);
+            let result = parse(&mut tokens, &mut memory);
             if let Err(e) = result {
                 eprintln!("{}\n", e);
                 rollback(&mut tokens, old_tokens_len);
