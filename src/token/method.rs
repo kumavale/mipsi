@@ -230,7 +230,7 @@ impl Tokens {
     }
 
     /// Return: Ok((register_idx, append idx))
-    pub fn expect_memory(&self) -> Result<(usize, i32), String> {
+    pub fn expect_memory(&self) -> Result<(usize, u32), String> {
         if let TokenKind::MEMORY(_, i, j) = self.token[self.idx].kind {
             Ok((i, j))
         } else {

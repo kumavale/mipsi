@@ -281,24 +281,23 @@ fn is_register(word: &str) -> Result<(RegisterKind, usize), String> {
 }
 
 /// [0-9]?[0-9]* \( `is_register` \)
-fn is_memory(word: &str) -> Result<(RegisterKind, usize, i32), String> {
+fn is_memory(word: &str) -> Result<(RegisterKind, usize, u32), String> {
     let errmsg = format!("is_memory(): not memory index: {}", word);
     if Some(')') != word.chars().nth(word.len()-1) {
         return  Err(errmsg);
     }
-    let mut add = 0;
+    let mut add = 0u32;
     let mut s = word.to_string();
     s.pop();  // Delete ')'
     let mut s_chars = s.chars();
     while let Some(c) = s_chars.next() {
-        let num = c as i32 - 48;
-        if 0 <= num && num <= 9 {
-            add = add * 10 + num;
+        if c.is_ascii_digit() {
+            add = add * 10 + (c as u32 - 48);
         } else if c == '(' {
             let mut reg = String::new();
             #[allow(clippy::while_let_on_iterator)]
             while let Some(c) = s_chars.next() {
-                reg = format!("{}{}", reg, c);
+                reg.push(c);
             }
             let (reg, idx) = is_register(&reg)?;
             return Ok((reg, idx, add));

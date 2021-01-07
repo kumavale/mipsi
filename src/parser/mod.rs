@@ -6,6 +6,7 @@ use std::error::Error;
 
 use super::token::*;
 use super::token::register::Registers;
+use super::token::memory::*;
 
 pub mod display;
 use crate::parser::display::*;
@@ -40,10 +41,11 @@ pub fn parse(mut tokens: &mut Tokens,
         }
 
         // Skip LABEL, INDICATE and EOL
-        while match *tokens.kind() {
-            TokenKind::LABEL(_, _, _) | TokenKind::INDICATE(_) | TokenKind::EOL => true,
-            _ => false,
-        } { if tokens.consume().is_none() { return Ok(()); } }
+        while matches!(*tokens.kind(), TokenKind::LABEL(_, _, _) | TokenKind::INDICATE(_) | TokenKind::EOL) {
+            if tokens.consume().is_none() {
+                return Ok(());
+            }
+        }
 
         let instruction_kind = tokens.expect_instruction()?;
 
@@ -358,7 +360,7 @@ pub fn parse(mut tokens: &mut Tokens,
                     },
                     // print_string: $a0=string(data index)
                     4  => {
-                        print!("{}", get_string(&data, &stack, registers[4])?);  // $a0
+                        print!("{}", get_string(&data, &stack, registers[4] as u32)?);  // $a0
                         let _ = std::io::stdout().flush();
                     },
                     // read_int: return $v0
@@ -483,13 +485,13 @@ pub enum SignExtension {
 /// argument2: stack:&[u8]
 /// argument3: index: isize  =>  stack(<=0) | data(0<)
 /// argument4: byte
-pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize, se: SignExtension)
+pub fn get_int(data: &[u8], stack: &[u8], index: u32, byte: usize, se: SignExtension)
     -> Result<i32, String>
 {
     let mut int: u32 = 0;
 
     // data
-    if 0 < index {
+    if index < DYNAMIC_DATA {
         let index = (index - 1) as usize;
         if data.len() < index+byte {
             return Err(
@@ -503,7 +505,7 @@ pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize, se: SignExt
 
     // stack
     } else {
-        let index = -index as usize;
+        let index = (STACK_SEGMENT - index) as usize;
         if stack.len() < index+byte {
             return Err(
                 format!("get_int(): index out of bounds: the stack len is {}, but the index is {}-{}",
@@ -521,11 +523,11 @@ pub fn get_int(data: &[u8], stack: &[u8], index: isize, byte: usize, se: SignExt
     }
 }
 
-pub fn get_string(data: &[u8], stack: &[u8], index: i32)
+pub fn get_string(data: &[u8], stack: &[u8], index: u32)
     -> Result<String, String>
 {
     // data
-    if 0 < index {
+    if index < DYNAMIC_DATA {
         let mut i = (index - 1) as usize;
         let mut s = String::new();
         let data_len = data.len();
@@ -539,7 +541,7 @@ pub fn get_string(data: &[u8], stack: &[u8], index: i32)
 
     // stack
     } else {
-        let mut i = -index as usize;
+        let mut i = (STACK_SEGMENT - index) as usize;
         let mut s = String::new();
         let stack_len = stack.len();
 

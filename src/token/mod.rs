@@ -1,5 +1,6 @@
 pub mod method;
 pub mod register;
+pub mod memory;
 
 use super::token::register::RegisterKind;
 
@@ -146,7 +147,7 @@ pub enum TokenKind {
     INDICATE(IndicateKind),               // Indication
     INTEGER(i32),                         // Immediate
     REGISTER(RegisterKind, usize),        // (_, Register index)
-    MEMORY(RegisterKind, usize, i32),     // (_, Register index, Append index) for data,stack
+    MEMORY(RegisterKind, usize, u32),     // (_, Register index, Append index) for data,stack
     DATA(RegisterKind, usize, String),    // (_, Label name)
     LABEL(String, usize, Option<usize>),  // (Literal, Token index, Data index)
     ADDRESS(String),                      // Label

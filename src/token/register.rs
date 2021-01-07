@@ -1,4 +1,5 @@
 use std::ops::{Index, IndexMut};
+use super::memory::*;
 
 #[derive(Clone, Debug, PartialEq)]
 #[allow(non_camel_case_types)]
@@ -17,9 +18,19 @@ pub enum RegisterKind {
     ra,                              //    31: Return Address
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Registers {
     regs: [i32; 32],
+}
+
+impl Default for Registers {
+    fn default() -> Self {
+        let mut regs = [0i32; 32];
+        regs[RegisterKind::sp as usize] = STACK_SEGMENT as i32;  // init stack pointer
+        Self {
+            regs,
+        }
+    }
 }
 
 impl Index<usize> for Registers {

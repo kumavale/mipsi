@@ -40,11 +40,9 @@ fn main() {
         let mut hi: u32 = 0;
         let mut lo: u32 = 0;
         let mut data:  Vec<u8> = Vec::new();
-        let mut stack: Vec<u8> = vec![0];
+        let mut stack: Vec<u8> = Vec::new();
 
-        parser::parse(&mut tokens, &mut registers, &mut hi, &mut lo,
-            &mut data, &mut stack)
-            .unwrap();
+        parser::parse(&mut tokens, &mut registers, &mut hi, &mut lo, &mut data, &mut stack).unwrap();
 
         //println!("{:?}", tokens);
         //parser::display::display_data_per_4byte(&data);

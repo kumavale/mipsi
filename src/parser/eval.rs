@@ -1,5 +1,6 @@
 use super::super::token::*;
 use super::super::token::register::Registers;
+use super::super::token::memory::*;
 use super::super::parser::{SignExtension, get_int, get_string};
 
 use std::io::Write;
@@ -240,11 +241,11 @@ pub fn eval_load(registers: &mut Registers, tokens: &mut Tokens,
     let register_idx = tokens.expect_register()?;
     tokens.consume().ok_or(CONSUME_ERR)?;
     let idx = if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-        (registers[r_idx] + s_idx) as isize
+        registers[r_idx] as u32 + s_idx
     } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-        (d_idx as i32 + registers[r_idx]) as isize
+        d_idx as u32 + registers[r_idx] as u32
     } else {
-        tokens.expect_address()? as isize
+        tokens.expect_address()? as u32
     };
     registers[register_idx] = get_int(&data, &stack, idx, byte, se)?;
 
@@ -259,10 +260,10 @@ pub fn eval_store(registers: &mut Registers, tokens: &mut Tokens,
     let register_idx = tokens.expect_register()?;
     tokens.consume().ok_or(CONSUME_ERR)?;
     if let Ok((r_idx, append)) = tokens.expect_memory() {
-        let idx = registers[r_idx] + append;
+        let idx = registers[r_idx] as u32 + append;
 
         // data
-        if 0 < idx {
+        if idx < DYNAMIC_DATA {
             let index = (idx - 1) as usize;
             for i in 0..byte {
                 data[index+i] = (registers[register_idx] >> ((byte-1-i)*8)) as u8;
@@ -270,7 +271,7 @@ pub fn eval_store(registers: &mut Registers, tokens: &mut Tokens,
 
         // stack
         } else {
-            let index = -idx as usize;
+            let index = (STACK_SEGMENT - idx) as usize;
             if stack.len() <= index+byte {
                 stack.resize(index+byte+1, 0);
             }
@@ -309,13 +310,13 @@ pub fn eval_myown(registers: &Registers, tokens: &mut Tokens,
             } else if let Ok(num) = tokens.expect_integer() {
                 print!("{}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-                let idx = (registers[r_idx] + s_idx) as isize;
+                let idx = registers[r_idx] as u32 + s_idx;
                 print!("{}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                let idx = (registers[r_idx] as usize + d_idx) as isize;
+                let idx = (registers[r_idx] as usize + d_idx) as u32;
                 print!("{}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
             } else {
-                let idx = tokens.expect_address()? as isize;
+                let idx = tokens.expect_address()? as u32;
                 print!("{}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
@@ -327,13 +328,13 @@ pub fn eval_myown(registers: &Registers, tokens: &mut Tokens,
             } else if let Ok(num) = tokens.expect_integer() {
                 print!("{:x}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-                let idx = (registers[r_idx] + s_idx) as isize;
+                let idx = registers[r_idx] as u32 + s_idx;
                 print!("{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                let idx = (registers[r_idx] as usize + d_idx) as isize;
+                let idx = registers[r_idx] as u32 + d_idx as u32;
                 print!("{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
             } else {
-                let idx = tokens.expect_address()? as isize;
+                let idx = tokens.expect_address()? as u32;
                 print!("{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
@@ -345,13 +346,13 @@ pub fn eval_myown(registers: &Registers, tokens: &mut Tokens,
             } else if let Ok(num) = tokens.expect_integer() {
                 print!("0x{:x}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-                let idx = (registers[r_idx] + s_idx) as isize;
+                let idx = registers[r_idx] as u32 + s_idx;
                 print!("0x{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                let idx = (registers[r_idx] as usize + d_idx) as isize;
+                let idx = registers[r_idx] as u32 + d_idx as u32;
                 print!("0x{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
             } else {
-                let idx = tokens.expect_address()? as isize;
+                let idx = tokens.expect_address()? as u32;
                 print!("0x{:x}", get_int(&data, &stack, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
@@ -363,7 +364,7 @@ pub fn eval_myown(registers: &Registers, tokens: &mut Tokens,
             } else if let Ok(d_idx) = tokens.expect_address() {
                 print!("{}", data[d_idx-1] as char);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-                let idx = (registers[r_idx] + s_idx) as i32;
+                let idx = registers[r_idx] as u32 + s_idx;
                 print!("{}", &get_string(&data, &stack, idx)?[..1]);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                 let idx = (registers[r_idx] as usize + d_idx) as usize;
@@ -377,14 +378,14 @@ pub fn eval_myown(registers: &Registers, tokens: &mut Tokens,
         InstructionKind::PRTS => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                print!("{}", get_string(&data, &stack, registers[r_idx])?);
+                print!("{}", get_string(&data, &stack, registers[r_idx] as u32)?);
             } else if let Ok(d_idx) = tokens.expect_address() {
-                print!("{}", get_string(&data, &stack, d_idx as i32)?);
+                print!("{}", get_string(&data, &stack, d_idx as u32)?);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
-                let idx = (registers[r_idx] + s_idx) as i32;
+                let idx = registers[r_idx] as u32 + s_idx;
                 print!("{}", get_string(&data, &stack, idx)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                let idx = (registers[r_idx] as usize + d_idx) as i32;
+                let idx = registers[r_idx] as u32 + d_idx as u32;
                 print!("{}", get_string(&data, &stack, idx)?);
             } else {
                 let s = tokens.expect_literal()?;
