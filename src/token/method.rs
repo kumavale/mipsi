@@ -4,10 +4,11 @@ use super::super::token::memory::*;
 impl Tokens {
     pub fn new() -> Self {
         let token: Vec<Token> = Vec::new();
-        let token_trace    = std::env::var("TOKEN_TRACE").is_ok();
-        let data_trace     = std::env::var("DATA_TRACE").is_ok();
-        let stack_trace    = std::env::var("STACK_TRACE").is_ok();
-        let register_trace = std::env::var("REGISTER_TRACE").is_ok();
+        let token_trace       = std::env::var("TOKEN_TRACE").is_ok();
+        let data_trace        = std::env::var("DATA_TRACE").is_ok();
+        let stack_trace       = std::env::var("STACK_TRACE").is_ok();
+        let register_trace    = std::env::var("REGISTER_TRACE").is_ok();
+        let fp_register_trace = std::env::var("FP_REGISTER_TRACE").is_ok();
 
         Tokens { token,
                  data_area_now: true,
@@ -20,6 +21,7 @@ impl Tokens {
                  data_trace,
                  stack_trace,
                  register_trace,
+                 fp_register_trace,
         }
     }
 
@@ -97,6 +99,11 @@ impl Tokens {
     #[allow(dead_code)]
     pub fn register_trace(&self) -> bool {
         self.register_trace
+    }
+
+    #[allow(dead_code)]
+    pub fn fp_register_trace(&self) -> bool {
+        self.fp_register_trace
     }
 
     #[allow(dead_code)]

@@ -16,16 +16,24 @@ pub enum RegisterKind {
     sp,                              //    29: Stack Pointer
     fp,                              //    30: Frame Pointer
     ra,                              //    31: Return Address
+
+    // Floating-Point registers
+    f0, f2,                                    // Hold results of floating-point type function
+    f1, f3, f4, f5, f6, f7, f8, f9, f10, f11,  // Temporary registers
+    f12, f13, f14, f15, f16, f17, f18, f19,    // Pass single or double precision actual arguments
+    f20, f21, f22, f23,                        // Temporary registers
+    f24, f25, f26, f27, f28, f29, f30, f31,    // Saved registers
+    fcsr,                                      // FPU control and status register
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Registers {
-    regs: [i32; 32],
+    regs: [i32; 32+32+1],
 }
 
 impl Default for Registers {
     fn default() -> Self {
-        let mut regs = [0i32; 32];
+        let mut regs = [0i32; 32+32+1];
         regs[RegisterKind::sp as usize] = STACK_SEGMENT as i32;  // init stack pointer
         Self {
             regs,

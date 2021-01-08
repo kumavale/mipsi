@@ -401,3 +401,35 @@ pub fn eval_myown(memory: &Memory, tokens: &mut Tokens, kind: InstructionKind) -
     Ok(())
 }
 
+pub fn eval_fp_arithmetic(registers: &mut Registers, tokens: &mut Tokens, kind: InstructionKind) -> Result<()> {
+    tokens.consume().ok_or(CONSUME_ERR)?;
+    if let Ok(rd_idx) = tokens.expect_register() {
+        registers[rd_idx] = {
+            tokens.consume().ok_or(CONSUME_ERR)?;
+            let r1 = match tokens.expect_register()? {
+                idx @ 0..=31 => registers[idx] as f32,
+                idx => f32::from_bits(registers[idx] as u32),
+            };
+            tokens.consume().ok_or(CONSUME_ERR)?;
+            let r2 = if let Ok(register_idx) = tokens.expect_register() {
+                match register_idx {
+                    0..=31 => registers[register_idx] as f32,
+                    _ => f32::from_bits(registers[register_idx] as u32),
+                }
+            } else {
+                tokens.expect_integer()? as f32
+            };
+            let result = match kind {
+                InstructionKind::ADD_S => r1 + r2,
+                InstructionKind::SUB_S => r1 - r2,
+                InstructionKind::MUL_S => r1 * r2,
+                InstructionKind::DIV_S => r1 / r2,
+                _ => unreachable!(),
+            };
+            result.to_bits() as i32
+        };
+    }
+
+    Ok(())
+}
+

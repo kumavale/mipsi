@@ -5,7 +5,7 @@ use std::io::Write;
 use std::error::Error;
 
 use super::token::*;
-use super::token::register::Registers;
+use super::token::register::{Registers, RegisterKind::*};
 use super::token::memory::*;
 
 pub mod display;
@@ -58,8 +58,27 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                 eval_arithmetic(&mut memory.registers, &mut tokens, |x, y| x.checked_sub(y))?,
             InstructionKind::SUBU =>
                 eval_arithmetic(&mut memory.registers, &mut tokens, |x, y| Some(x - y))?,
-            InstructionKind::MUL =>
-                eval_arithmetic(&mut memory.registers, &mut tokens, |x, y| x.checked_mul(y))?, // TODO: mult $2,$3;mflo $1
+            InstructionKind::MUL => {
+                //eval_arithmetic(&mut memory.registers, &mut tokens, |x, y| x.checked_mul(y))?, // TODO: mult $2,$3;mflo $1
+                tokens.consume().ok_or(CONSUME_ERR)?;
+                let r1_idx = tokens.expect_register()?;
+                tokens.consume().ok_or(CONSUME_ERR)?;
+                let r2_idx = tokens.expect_register()?;
+                if let TokenKind::REGISTER(_, r3_idx) = tokens.next().unwrap().kind {
+                    tokens.consume().ok_or(CONSUME_ERR)?;
+                    // mult $2, $3
+                    let ans = memory.registers[r2_idx] as i64 * memory.registers[r3_idx] as i64;
+                    memory.lo = ans as u32;
+                    memory.hi = ((ans as u64) >> 32) as u32;
+                    // mflo $1
+                    memory.registers[r1_idx] = memory.lo as i32;
+                } else {
+                    // mult
+                    let ans = memory.registers[r1_idx] as i64 * memory.registers[r2_idx] as i64;
+                    memory.lo = ans as u32;
+                    memory.hi = ((ans as u64) >> 32) as u32;
+                }
+            },
             InstructionKind::REM =>
                 eval_arithmetic(&mut memory.registers, &mut tokens, |x, y| Some(x % y))?,
             InstructionKind::REMU =>
@@ -355,6 +374,11 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                         print!("{}", memory.registers[4]);  // $a0
                         let _ = std::io::stdout().flush();
                     },
+                    // print_float: $f12=integer
+                    2  => {
+                        print!("{}", f32::from_bits(memory.registers[f12 as usize] as u32));  // $f12
+                        let _ = std::io::stdout().flush();
+                    },
                     // print_string: $a0=string(data index)
                     4  => {
                         print!("{}", get_string(&memory, memory.registers[4] as u32)?);  // $a0
@@ -446,6 +470,33 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                 reset(&mut memory, &mut tokens);
                 break;
             },
+
+            // FPU Instructions
+            InstructionKind::ADD_S =>
+                eval_fp_arithmetic(&mut memory.registers, &mut tokens, InstructionKind::ADD_S)?,
+            InstructionKind::SUB_S =>
+                eval_fp_arithmetic(&mut memory.registers, &mut tokens, InstructionKind::SUB_S)?,
+            InstructionKind::DIV_S =>
+                eval_fp_arithmetic(&mut memory.registers, &mut tokens, InstructionKind::DIV_S)?,
+            InstructionKind::MUL_S =>
+                eval_fp_arithmetic(&mut memory.registers, &mut tokens, InstructionKind::MUL_S)?,
+            InstructionKind::MTC1 => {
+                tokens.consume().ok_or(CONSUME_ERR)?;
+                let rs_idx = tokens.expect_register()?;
+                tokens.consume().ok_or(CONSUME_ERR)?;
+                let rd_idx = tokens.expect_register()?;
+                memory.registers[rd_idx] = (memory.registers[rs_idx] as f32).to_bits() as i32;
+            },
+            InstructionKind::CVT_S_W => {
+                tokens.consume().ok_or(CONSUME_ERR)?;
+                let rd_idx = tokens.expect_register()?;
+                memory.registers[rd_idx] = {
+                    tokens.consume().ok_or(CONSUME_ERR)?;
+                    let rs_idx = tokens.expect_register()?;
+                    (memory.registers[rs_idx] as f32).to_bits() as i32
+                };
+            },
+
             //_ => (),
         }
 
@@ -461,6 +512,9 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
         }
         if tokens.register_trace() {
             display_register(&memory.registers);
+        }
+        if tokens.fp_register_trace() {
+            display_fp_register(&memory.registers);
         }
     }
 

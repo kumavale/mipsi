@@ -11,7 +11,7 @@ pub fn display_help() {
     println!("dispr ... display register");
 }
 
-// Display all registers
+// Display registers
 pub fn display_register(registers: &Registers) {
     println!("\n====[ REGISTER ]================================================");
     for i in 0..8 {
@@ -20,6 +20,23 @@ pub fn display_register(registers: &Registers) {
                 print!(" ${:<2}:0x{:08x}\t", i+j*8, registers[i+j*8]);
             } else {
                 print!(" ${:<2}:\x1b[31m0x{:08x}\x1b[m\t", i+j*8, registers[i+j*8]);
+            }
+            std::io::stdout().flush().unwrap();
+        }
+        println!();
+    }
+    println!("================================================================");
+}
+
+// Display floating-point registers
+pub fn display_fp_register(registers: &Registers) {
+    println!("\n====[ FLOATING-POINT REGISTER ]=================================");
+    for i in 0..8 {
+        for j in 0..4 {
+            if registers[32+i+j*8] == 0 {
+                print!(" ${:<2}:0x{:08x}\t", i+j*8, registers[32+i+j*8]);
+            } else {
+                print!(" ${:<2}:\x1b[31m0x{:08x}\x1b[m\t", i+j*8, registers[32+i+j*8]);
             }
             std::io::stdout().flush().unwrap();
         }

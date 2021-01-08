@@ -31,6 +31,7 @@ pub fn run() {
             "dispd" => { display_data_per_4byte(&memory.static_data);  continue; },
             "disps" => { display_stack(&memory.stack);                 continue; },
             "dispr" => { display_register(&memory.registers);          continue; },
+            "dispf" => { display_fp_register(&memory.registers);       continue; },
             "" => continue,
             _ => (),
         }

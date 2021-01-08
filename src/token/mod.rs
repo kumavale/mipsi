@@ -6,7 +6,9 @@ use super::token::register::RegisterKind;
 
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[allow(non_camel_case_types)]
 pub enum InstructionKind {
+    /// # CPU Instructions
     /// Arithmetic, Logic
     ADD,      // Rd, Rs, Rt    | Rd = Rs + Rt
     ADDU,     // Rd, Rs, Rt    | Rd = Rs + Rt (without overflow)
@@ -122,8 +124,44 @@ pub enum InstructionKind {
     PRTX,     // Rs|literal            | Print hex (add 0x)
     PRTC,     // Rs|literal|label      | Print char
     PRTS,     // Rs|literal|label      | Print string
-
     RST,      // Reset
+
+    /// # FPU Instructions
+    /// Loads and Stores Using Register+Offset Address Mode
+    //LDC1,
+    //LWC1,
+    //SDC1,
+    //SWC1,
+
+    /// Move To and From Instructions
+    //CFC1,
+    //CTC1,
+    //MFC1,
+    MTC1,
+
+    /// Arithmetic Instructions
+    //ABS_S,
+    ADD_S,
+    DIV_S,
+    //MADD_S,
+    //MSUB_S,
+    MUL_S,
+    //NEG_S,
+    //NMADD_S,
+    //NMSUB_S,
+    //RECIP_S,
+    //RSQRT_S,
+    //SQRT,
+    SUB_S,
+
+    /// Branch Instructions
+    //BC1F,
+    //BC1T,
+
+    /// Compare Instructions
+
+    /// Convert Instructions
+    CVT_S_W,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -177,6 +215,7 @@ pub struct Tokens {
     data_trace: bool,                 // Environment variable 'DATA_TRACE'
     stack_trace: bool,                // Environment variable 'STACK_TRACE'
     register_trace: bool,             // Environment variable 'REGISTER_TRACE'
+    fp_register_trace: bool,          // Environment variable 'FP_REGISTER_TRACE'
 }
 
 pub static CONSUME_ERR: &str = "token.consume(): none";

@@ -30,6 +30,7 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
             tokens.push(TokenKind::DATA(k, i, s), nol, fi);
         } else {
             let token_kind = match &*word.to_ascii_uppercase() {
+                // CPU Instructions
                 // Arithmetic, Logic
                 "ADD"     => TokenKind::INSTRUCTION(InstructionKind::ADD),
                 "ADDU"    => TokenKind::INSTRUCTION(InstructionKind::ADDU),
@@ -156,6 +157,16 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                 "PRTS"    => TokenKind::INSTRUCTION(InstructionKind::PRTS),
                 "RST"     => TokenKind::INSTRUCTION(InstructionKind::RST),
 
+                // FPU Instructions
+                "LWC1"    => TokenKind::INSTRUCTION(InstructionKind::LW),
+                "SWC1"    => TokenKind::INSTRUCTION(InstructionKind::SW),
+                "MTC1"    => TokenKind::INSTRUCTION(InstructionKind::MTC1),
+                "ADD.S"   => TokenKind::INSTRUCTION(InstructionKind::ADD_S),
+                "DIV.S"   => TokenKind::INSTRUCTION(InstructionKind::DIV_S),
+                "MUL.S"   => TokenKind::INSTRUCTION(InstructionKind::MUL_S),
+                "SUB.S"   => TokenKind::INSTRUCTION(InstructionKind::SUB_S),
+                "CVT.S.W" => TokenKind::INSTRUCTION(InstructionKind::CVT_S_W),
+
                 _ =>
                     if is_label(&word) {
                         let mut identifier = (*word).to_string();
@@ -274,6 +285,41 @@ fn is_register(word: &str) -> Result<(RegisterKind, usize), String> {
         "sp"   | "29" => (RegisterKind::sp,  29),
         "fp"   | "30" => (RegisterKind::fp,  30),
         "ra"   | "31" => (RegisterKind::ra,  31),
+
+        "fv0" | "f0"   => (RegisterKind::f0,   32),
+                "f1"   => (RegisterKind::f1,   33),
+        "fv1" | "f2"   => (RegisterKind::f2,   34),
+                "f3"   => (RegisterKind::f3,   35),
+        "ft0" | "f4"   => (RegisterKind::f4,   36),
+                "f5"   => (RegisterKind::f5,   37),
+        "ft1" | "f6"   => (RegisterKind::f6,   38),
+                "f7"   => (RegisterKind::f7,   39),
+        "ft2" | "f8"   => (RegisterKind::f8,   40),
+                "f9"   => (RegisterKind::f9,   41),
+        "ft3" | "f10"  => (RegisterKind::f10,  42),
+                "f11"  => (RegisterKind::f11,  43),
+        "fa0" | "f12"  => (RegisterKind::f12,  44),
+                "f13"  => (RegisterKind::f13,  45),
+        "fa1" | "f14"  => (RegisterKind::f14,  46),
+                "f15"  => (RegisterKind::f15,  47),
+        "ft4" | "f16"  => (RegisterKind::f16,  48),
+                "f17"  => (RegisterKind::f17,  49),
+        "ft8" | "f18"  => (RegisterKind::f18,  50),
+                "f19"  => (RegisterKind::f19,  51),
+        "fs0" | "f20"  => (RegisterKind::f20,  52),
+                "f21"  => (RegisterKind::f21,  53),
+        "fs1" | "f22"  => (RegisterKind::f22,  54),
+                "f23"  => (RegisterKind::f23,  55),
+        "fs2" | "f24"  => (RegisterKind::f24,  56),
+                "f25"  => (RegisterKind::f25,  57),
+        "fs3" | "f26"  => (RegisterKind::f26,  58),
+                "f27"  => (RegisterKind::f27,  59),
+        "fs4" | "f28"  => (RegisterKind::f28,  60),
+                "f29"  => (RegisterKind::f29,  61),
+        "fs5" | "f30"  => (RegisterKind::f30,  62),
+                "f31"  => (RegisterKind::f31,  63),
+                "fcsr" => (RegisterKind::fcsr, 64),
+
         _ => return Err(format!("is_register(): invalid register name: {}", word)),
     };
 
