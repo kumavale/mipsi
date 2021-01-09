@@ -1,5 +1,5 @@
 use super::super::token::*;
-use super::super::token::register::Registers;
+use super::super::token::register::{Registers, RegisterKind::*};
 use super::super::token::memory::*;
 use super::super::parser::{SignExtension, get_int, get_string};
 
@@ -216,7 +216,7 @@ pub fn eval_jump(registers: &mut Registers, tokens: &mut Tokens, kind: Instructi
         InstructionKind::JAL => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             let idx = tokens.expect_label()?;
-            registers[31] = tokens.idx() as i32 + 1;  // $ra
+            registers[ra] = tokens.idx() as i32 + 1;
             tokens.goto(idx-1);
         },
         InstructionKind::JR => {

@@ -52,9 +52,27 @@ impl Index<usize> for Registers {
     }
 }
 
+impl Index<RegisterKind> for Registers {
+    type Output = i32;
+
+    fn index(&self, idx: RegisterKind) -> &Self::Output {
+        let idx = idx as usize;
+        match idx {
+            0 => &0,
+            _ => &self.regs[idx],
+        }
+    }
+}
+
 impl IndexMut<usize> for Registers {
     fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
         &mut self.regs[idx]
+    }
+}
+
+impl IndexMut<RegisterKind> for Registers {
+    fn index_mut(&mut self, idx: RegisterKind) -> &mut Self::Output {
+        &mut self.regs[idx as usize]
     }
 }
 

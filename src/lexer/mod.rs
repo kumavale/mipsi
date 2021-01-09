@@ -618,15 +618,12 @@ fn indicate_space(word: &str)
 
 fn split_words(line: &str) -> Vec<String> {
     let mut words: Vec<String> = Vec::new();
-
-    let line = line.replace(":", ": ");
     let mut line_iter = line.chars();
 
     while let Some(ch) = line_iter.next() {
         // Skip white space
-        match ch {
-            ' ' | ',' | '\n' | '\r' | '\t' => continue,
-            _ => (),
+        if matches!(ch, ' ' | ',' | '\n' | '\r' | '\t') {
+            continue;
         }
 
         // string for .asciiz | literal
@@ -667,7 +664,7 @@ fn split_words(line: &str) -> Vec<String> {
                             _    => format!("\\{}", ch),
                         };
                     }
-                    asciiz = format!("{}{}", asciiz, ch2);
+                    asciiz.push_str(&ch2);
                     continue;
                 }
                 asciiz.push('"');
@@ -715,13 +712,21 @@ fn split_words(line: &str) -> Vec<String> {
 
         // word except string
         } else {
-            let mut word = format!("{}", ch);
+            let mut word = ch.to_string();
             #[allow(clippy::while_let_on_iterator)]
             while let Some(ch2) = line_iter.next() {
                 match ch2 {
                     ' ' | ',' | '\n' | '\r' | '\t' => { break; },
+                    '#' =>  {  // e.g. $t0#comment
+                        words.push(word);
+                        return words;
+                    },
+                    ':' => {  // label
+                        word.push(':');
+                        break;
+                    }
                     _ => {
-                        word = format!("{}{}", word, ch2);
+                        word.push(ch2);
                     },
                 }
             }

@@ -140,9 +140,9 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                             return Err("ROR: invalid token".into());
                         }
                     };
-                    memory.registers[1] = (rs as u32 >> rt) as i32;
+                    memory.registers[at] = (rs as u32 >> rt) as i32;
                     memory.registers[rd_idx] = (rs << (32-rt)) as i32;
-                    memory.registers[rd_idx] | memory.registers[1]
+                    memory.registers[rd_idx] | memory.registers[at]
                 };
             },
             InstructionKind::ROL => {
@@ -162,9 +162,9 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                             return Err("ROL: invalid token".into());
                         }
                     };
-                    memory.registers[1] = rs << rt;
+                    memory.registers[at] = rs << rt;
                     memory.registers[rd_idx] = (rs as u32 >> (32-rt)) as i32;
-                    memory.registers[rd_idx] | memory.registers[1]
+                    memory.registers[rd_idx] | memory.registers[at]
                 };
             },
 
@@ -257,7 +257,7 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                 let r_idx = tokens.expect_register()?;
                 tokens.consume().ok_or(CONSUME_ERR)?;
                 let l_idx = tokens.expect_label()?;
-                memory.registers[31] = tokens.idx() as i32 + 1;  // $ra
+                memory.registers[ra] = tokens.idx() as i32 + 1;
                 if 0 <= memory.registers[r_idx] {
                     tokens.goto(l_idx-1);
                 }
@@ -267,7 +267,7 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                 let r_idx = tokens.expect_register()?;
                 tokens.consume().ok_or(CONSUME_ERR)?;
                 let l_idx = tokens.expect_label()?;
-                memory.registers[31] = tokens.idx() as i32 + 1;  // $ra
+                memory.registers[ra] = tokens.idx() as i32 + 1;
                 if memory.registers[r_idx] < 0 {
                     tokens.goto(l_idx-1);
                 }
@@ -368,27 +368,27 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
 
             // Exception, Interrupt
             InstructionKind::SYSCALL => {
-                match memory.registers[2] {  // v0
+                match memory.registers[v0] {
                     // print_int: $a0=integer
                     1  => {
-                        print!("{}", memory.registers[4]);  // $a0
+                        print!("{}", memory.registers[a0]);
                         let _ = std::io::stdout().flush();
                     },
                     // print_float: $f12=integer
                     2  => {
-                        print!("{}", f32::from_bits(memory.registers[f12 as usize] as u32));  // $f12
+                        print!("{}", f32::from_bits(memory.registers[f12] as u32));
                         let _ = std::io::stdout().flush();
                     },
                     // print_string: $a0=string(data index)
                     4  => {
-                        print!("{}", get_string(&memory, memory.registers[4] as u32)?);  // $a0
+                        print!("{}", get_string(&memory, memory.registers[a0] as u32)?);
                         let _ = std::io::stdout().flush();
                     },
                     // read_int: return $v0
                     5  => {
                         let mut input = String::new();
                         std::io::stdin().read_line(&mut input).unwrap();
-                        memory.registers[2] = if let Ok(num) = input.trim().parse::<i32>() {
+                        memory.registers[v0] = if let Ok(num) = input.trim().parse::<i32>() {
                             num
                         } else {
                             0
@@ -398,12 +398,12 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                     8  => {
                         let mut input = String::new();
                         std::io::stdin().read_line(&mut input).unwrap();
-                        let mut index = memory.registers[4] as usize - 1;
+                        let mut index = memory.registers[a0] as usize - 1;
                         if memory.static_data.len() < index + input.len() {  // TODO
-                            return Err(format!("not enough space for .data: {}", memory.registers[4]).into());
+                            return Err(format!("not enough space for .data: {}", memory.registers[a0]).into());
                         }
                         for (i, ch) in input.into_bytes().iter().enumerate() {
-                            if i >= memory.registers[5] as usize {
+                            if i >= memory.registers[a1] as usize {
                                 break;
                             }
                             memory.static_data[index] = *ch;
@@ -412,8 +412,8 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                     },
                     // sbrk(allocate heap memory): $a0=size. $v0=address
                     9 => {
-                        let size = memory.registers[4];  // $a0
-                        memory.registers[2] = memory.malloc(size)?;  // $v0
+                        let size = memory.registers[a0];
+                        memory.registers[v0] = memory.malloc(size)?;
                     },
                     // exit
                     10 => {
@@ -422,33 +422,33 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                     },
                     // print_character
                     11 => {
-                        print!("{}", memory.registers[4] as u8 as char);
+                        print!("{}", memory.registers[a0] as u8 as char);
                         let _ = std::io::stdout().flush();
                     },
                     // read character
                     12 => {
                         let mut input = String::new();
                         std::io::stdin().read_line(&mut input).unwrap();
-                        memory.registers[2] = input.as_bytes()[0] as i32;
+                        memory.registers[v0] = input.as_bytes()[0] as i32;
                     },
                     // exit2
                     17 => {
-                        std::process::exit(memory.registers[4]);
+                        std::process::exit(memory.registers[a0]);
                     },
                     // random_int:
                     // $a0 = random number(int)
                     41 => {
                         let rnd = rand::thread_rng().gen();
-                        memory.registers[4] = rnd;
+                        memory.registers[a0] = rnd;
                     },
                     // random_int_range:
                     // $a0 = random number(int)
                     // $a1 = upper bound of range of returned valus.
                     42 => {
-                        let rnd = rand::thread_rng().gen_range(0, memory.registers[5]);  // $a1
-                        memory.registers[4] = rnd;
+                        let rnd = rand::thread_rng().gen_range(0, memory.registers[a1]);
+                        memory.registers[a0] = rnd;
                     },
-                    _ => return Err(format!("SYSCALL: invalid code: {}", memory.registers[2]).into()),
+                    _ => return Err(format!("SYSCALL: invalid code: {}", memory.registers[v0]).into()),
                 }
             },
             InstructionKind::NOP => (),  // Do nothing
@@ -534,7 +534,7 @@ pub enum SignExtension {
 /// # Example
 ///
 /// ```rust,ignore
-/// let int: i32 = get_int(&memory, registers[4], 4, SignExtension::Signed)?;
+/// let int: i32 = get_int(&memory, registers[a0], 4, SignExtension::Signed)?;
 /// ```
 ///
 /// argument1: data:&[u8]
@@ -629,7 +629,7 @@ pub fn get_string(memory: &Memory, index: u32) -> Result<String, String> {
         let stack_len = memory.stack.len();
 
         while i < stack_len && memory.stack[i] != 0 {
-            s = format!("{}{}", s, memory.stack[i] as char);
+            s.push(memory.stack[i] as char);
             i += 1;
         }
 
