@@ -751,6 +751,13 @@ fn data_analysis(tokens: &mut Tokens, data: &mut Vec<u8>) {
                             data.push(*b);
                             true
                         },
+                        TokenKind::INDICATE(IndicateKind::float(f)) => {
+                            data.push((f.to_bits()>>24) as u8);
+                            data.push((f.to_bits()>>16) as u8);
+                            data.push((f.to_bits()>> 8) as u8);
+                            data.push( f.to_bits()      as u8);
+                            true
+                        },
                         _ => false,
                     };
 

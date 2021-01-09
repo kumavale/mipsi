@@ -3,6 +3,8 @@ use super::token::*;
 use super::token::register::RegisterKind;
 
 /// Recieve 1 line
+/// nol: number_of_lines
+/// fi:  filename_idx
 pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
     -> Result<(), String>
 {
@@ -20,6 +22,8 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
     while let Some(word) = words.next() {
         if let Ok(num) = word.parse::<i32>() {
             tokens.push(TokenKind::INTEGER(num), nol, fi);
+        } else if let Ok(num) = word.parse::<f32>() {
+            tokens.push(TokenKind::FLOATING(num), nol, fi);
         } else if let Some(num) = is_hexadecimal(&word) {
             tokens.push(TokenKind::INTEGER(num), nol, fi);
         } else if let Ok((k, i)) = is_register(&word) {
@@ -158,6 +162,7 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                 "RST"     => TokenKind::INSTRUCTION(InstructionKind::RST),
 
                 // FPU Instructions
+                "LI.S"    => TokenKind::INSTRUCTION(InstructionKind::LI),
                 "LWC1"    => TokenKind::INSTRUCTION(InstructionKind::LW),
                 "SWC1"    => TokenKind::INSTRUCTION(InstructionKind::SW),
                 "MTC1"    => TokenKind::INSTRUCTION(InstructionKind::MTC1),
@@ -199,6 +204,10 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                             },
                             ".byte" => {
                                 indicate_byte(&mut tokens, nol, fi, words);
+                                break;
+                            },
+                            ".float" => {
+                                indicate_float(&mut tokens, nol, fi, words);
                                 break;
                             },
                             ".space" => {
@@ -550,6 +559,30 @@ fn indicate_byte(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice
                 }
             };
             tokens.push(TokenKind::INDICATE(IndicateKind::byte(byte)), nol, fi);
+        }
+    };
+}
+
+fn indicate_float(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice::Iter<&str>) {
+    let mut float = 0.0;
+    while let Some(word) = words.next() {
+        if 1 < word.len() && word.ends_with(':') {
+            let mut word = (*word).to_string();
+            let len = words.next().unwrap().parse::<usize>().unwrap();
+            word.pop().unwrap();
+            for _ in 0..len {
+                float = word.parse::<f32>().unwrap();
+                tokens.push(TokenKind::INDICATE(IndicateKind::float(float)), nol, fi);
+            }
+        } else if &word[..] == ":" {
+            let len = words.next().unwrap().parse::<usize>().unwrap();
+            for _ in 1..len {
+                tokens.push(TokenKind::INDICATE(IndicateKind::float(float)), nol, fi);
+            }
+
+        } else {
+            float = word.parse::<f32>().unwrap();
+            tokens.push(TokenKind::INDICATE(IndicateKind::float(float)), nol, fi);
         }
     };
 }

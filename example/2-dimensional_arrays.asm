@@ -15,3 +15,9 @@ arr3:	.byte   8:8
         .byte   8:8
         .byte   8:8
 
+arr4:
+		.float 32:10
+		.float 32.0:10
+		.float 32:10
+		.float 32.0:10
+

@@ -270,6 +270,15 @@ impl Tokens {
         }
     }
 
+    pub fn expect_floating(&self) -> Result<f32, String> {
+        if let TokenKind::FLOATING(f) = self.token[self.idx].kind {
+            Ok(f)
+        } else {
+            let t = &self.token[self.idx];
+            Err(format!("{}: expect TokenKind::FLOATING(f32). but got: {:?}", t.line, t.kind))
+        }
+    }
+
     pub fn expect_literal(&self) -> Result<String, String> {
         if let TokenKind::LITERAL(l) = &self.token[self.idx].kind {
             Ok(l.to_string())

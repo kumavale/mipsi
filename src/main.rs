@@ -22,8 +22,7 @@ fn main() {
 
         for (filename_idx, file) in args.iter().skip(1).enumerate() {
             let mut number_of_lines: u32 = 1;
-            let mut reader = BufReader::new(std::fs::File::open(file)
-                .expect("Failed file open"));
+            let mut reader = BufReader::new(std::fs::File::open(file).expect("Failed file open"));
             tokens.add_file(&file);
 
             let mut buf = String::new();
@@ -41,9 +40,10 @@ fn main() {
         parser::parse(&mut tokens, &mut memory).unwrap();
 
         //println!("{:?}", tokens);
-        //parser::display::display_data_per_4byte(&data);
-        //parser::display::display_stack(&stack);
-        //parser::display::display_register(&registers);
+        //parser::display::display_data_per_4byte(&memory.static_data);
+        //parser::display::display_stack(&memory.stack);
+        //parser::display::display_register(&memory.registers);
+        //parser::display::display_fp_register(&memory.registers);
     }
 }
 

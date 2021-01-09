@@ -9,6 +9,7 @@ pub fn display_help() {
     println!("dispd ... display data");
     println!("disps ... display stack");
     println!("dispr ... display register");
+    println!("dispf ... display floating-point register");
 }
 
 // Display registers

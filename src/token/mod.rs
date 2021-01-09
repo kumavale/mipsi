@@ -173,6 +173,7 @@ pub enum IndicateKind {
     word(u32),       // Number(32-bit)
     half(u16),       // (16-bit)
     byte(u8),        // 1 char(8-bit)
+    float(f32),      // single floating point (32-bit)
     space(u32),      // n byte
     ascii(String),   // String
     asciiz(String),  // String
@@ -183,7 +184,8 @@ pub enum IndicateKind {
 pub enum TokenKind {
     INSTRUCTION(InstructionKind),         // Instruction
     INDICATE(IndicateKind),               // Indication
-    INTEGER(i32),                         // Immediate
+    INTEGER(i32),                         // integer immediate
+    FLOATING(f32),                        // floating point immediate
     REGISTER(RegisterKind, usize),        // (_, Register index)
     MEMORY(RegisterKind, usize, u32),     // (_, Register index, Append index) for data,stack
     DATA(RegisterKind, usize, String),    // (_, Label name)

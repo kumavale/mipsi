@@ -122,8 +122,12 @@ where
     let register_idx = tokens.expect_register()?;
     registers[register_idx] = {
         tokens.consume().ok_or(CONSUME_ERR)?;
-        let integer = tokens.expect_integer()?;
-        fun(integer)
+        if let Ok(integer) = tokens.expect_integer() {
+            fun(integer)
+        } else {
+            let float = tokens.expect_floating()?;
+            float.to_bits() as i32
+        }
     };
 
     Ok(())
