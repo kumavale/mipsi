@@ -140,13 +140,13 @@ pub enum InstructionKind {
     MTC1,
 
     /// Arithmetic Instructions
-    //ABS_S,
+    ABS_S,
     ADD_S,
     DIV_S,
     //MADD_S,
     //MSUB_S,
     MUL_S,
-    //NEG_S,
+    NEG_S,
     //NMADD_S,
     //NMSUB_S,
     //RECIP_S,
@@ -155,13 +155,17 @@ pub enum InstructionKind {
     SUB_S,
 
     /// Branch Instructions
-    //BC1F,
-    //BC1T,
+    BC1F,
+    BC1T,
 
     /// Compare Instructions
+    C_EQ_S,
+    C_LE_S,
+    C_LT_S,
 
     /// Convert Instructions
     CVT_S_W,
+    CVT_W_S,
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -490,6 +490,24 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                 eval_fp_arithmetic(&mut memory.registers, &mut tokens, InstructionKind::DIV_S)?,
             InstructionKind::MUL_S =>
                 eval_fp_arithmetic(&mut memory.registers, &mut tokens, InstructionKind::MUL_S)?,
+            InstructionKind::ABS_S => {
+                tokens.consume().ok_or(CONSUME_ERR)?;
+                let rd_idx = tokens.expect_register()?;
+                memory.registers[rd_idx] = {
+                    tokens.consume().ok_or(CONSUME_ERR)?;
+                    let rs_idx = tokens.expect_register()?;
+                    f32::from_bits(memory.registers[rs_idx] as u32).abs().to_bits() as i32
+                };
+            },
+            InstructionKind::NEG_S => {
+                tokens.consume().ok_or(CONSUME_ERR)?;
+                let rd_idx = tokens.expect_register()?;
+                memory.registers[rd_idx] = {
+                    tokens.consume().ok_or(CONSUME_ERR)?;
+                    let rs_idx = tokens.expect_register()?;
+                    (-f32::from_bits(memory.registers[rs_idx] as u32)).to_bits() as i32
+                };
+            },
             InstructionKind::MTC1 => {
                 tokens.consume().ok_or(CONSUME_ERR)?;
                 let rs_idx = tokens.expect_register()?;
@@ -497,6 +515,29 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                 let rd_idx = tokens.expect_register()?;
                 memory.registers[rd_idx] = (memory.registers[rs_idx] as f32).to_bits() as i32;
             },
+            InstructionKind::BC1T => {
+                tokens.consume().ok_or(CONSUME_ERR)?;
+                let target = tokens.expect_label()?;
+                if memory.registers[fcsr] & 0x00800000 != 0 {
+                    tokens.goto(target-1);
+                    continue;
+                }
+            },
+            InstructionKind::BC1F => {
+                tokens.consume().ok_or(CONSUME_ERR)?;
+                let target = tokens.expect_label()?;
+                if memory.registers[fcsr] & 0x00800000 == 0 {
+                    tokens.goto(target-1);
+                    continue;
+                }
+            },
+            #[allow(clippy::float_cmp)]
+            InstructionKind::C_EQ_S =>
+                eval_fp_condition(&mut memory.registers, &mut tokens, |x, y| x == y)?,
+            InstructionKind::C_LE_S =>
+                eval_fp_condition(&mut memory.registers, &mut tokens, |x, y| x <= y)?,
+            InstructionKind::C_LT_S =>
+                eval_fp_condition(&mut memory.registers, &mut tokens, |x, y| x < y)?,
             InstructionKind::CVT_S_W => {
                 tokens.consume().ok_or(CONSUME_ERR)?;
                 let rd_idx = tokens.expect_register()?;
@@ -505,6 +546,13 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                     let rs_idx = tokens.expect_register()?;
                     (memory.registers[rs_idx] as f32).to_bits() as i32
                 };
+            },
+            InstructionKind::CVT_W_S => {
+                tokens.consume().ok_or(CONSUME_ERR)?;
+                let rs_idx = tokens.expect_register()?;
+                tokens.consume().ok_or(CONSUME_ERR)?;
+                let rd_idx = tokens.expect_register()?;
+                memory.registers[rd_idx] = (memory.registers[rs_idx] as f32).to_bits() as i32;
             },
 
             //_ => (),

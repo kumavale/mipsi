@@ -162,15 +162,24 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                 "RST"     => TokenKind::INSTRUCTION(InstructionKind::RST),
 
                 // FPU Instructions
+                "L.S"     => TokenKind::INSTRUCTION(InstructionKind::LA),
                 "LI.S"    => TokenKind::INSTRUCTION(InstructionKind::LI),
                 "LWC1"    => TokenKind::INSTRUCTION(InstructionKind::LW),
                 "SWC1"    => TokenKind::INSTRUCTION(InstructionKind::SW),
                 "MTC1"    => TokenKind::INSTRUCTION(InstructionKind::MTC1),
+                "ABS.S"   => TokenKind::INSTRUCTION(InstructionKind::ABS_S),
                 "ADD.S"   => TokenKind::INSTRUCTION(InstructionKind::ADD_S),
                 "DIV.S"   => TokenKind::INSTRUCTION(InstructionKind::DIV_S),
                 "MUL.S"   => TokenKind::INSTRUCTION(InstructionKind::MUL_S),
                 "SUB.S"   => TokenKind::INSTRUCTION(InstructionKind::SUB_S),
+                "NEG.S"   => TokenKind::INSTRUCTION(InstructionKind::NEG_S),
+                "BC1T"    => TokenKind::INSTRUCTION(InstructionKind::BC1T),
+                "BC1F"    => TokenKind::INSTRUCTION(InstructionKind::BC1F),
+                "C.EQ.S"  => TokenKind::INSTRUCTION(InstructionKind::C_EQ_S),
+                "C.LE.S"  => TokenKind::INSTRUCTION(InstructionKind::C_LE_S),
+                "C.LT.S"  => TokenKind::INSTRUCTION(InstructionKind::C_LT_S),
                 "CVT.S.W" => TokenKind::INSTRUCTION(InstructionKind::CVT_S_W),
+                "CVT.W.S" => TokenKind::INSTRUCTION(InstructionKind::CVT_W_S),
 
                 _ =>
                     if is_label(&word) {

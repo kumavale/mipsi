@@ -437,3 +437,20 @@ pub fn eval_fp_arithmetic(registers: &mut Registers, tokens: &mut Tokens, kind: 
     Ok(())
 }
 
+pub fn eval_fp_condition<F>(registers: &mut Registers, tokens: &mut Tokens, fun: F) -> Result<()>
+where
+    F: Fn(f32, f32) -> bool,
+{
+    tokens.consume().ok_or(CONSUME_ERR)?;
+    let r1_idx = tokens.expect_register()?;
+    tokens.consume().ok_or(CONSUME_ERR)?;
+    let r2_idx = tokens.expect_register()?;
+
+    if fun(f32::from_bits(registers[r1_idx] as u32), f32::from_bits(registers[r2_idx] as u32)) {
+        registers[fcsr] |= 0x00800000;  // FCC(0)
+    } else {
+        registers[fcsr] &= !0x00800000;  // FCC(0)
+    }
+
+    Ok(())
+}
