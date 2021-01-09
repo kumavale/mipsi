@@ -21,6 +21,7 @@ cargo run --release [file...]
 - DATA_TRACE  
 - STACK_TRACE  
 - REGISTER_TRACE  
+- FP_REGISTER_TRACE  
 
 ### REPL command
 - exit  ... to exit
@@ -29,6 +30,7 @@ cargo run --release [file...]
 - dispd ... display data
 - disps ... display stack
 - dispr ... display register
+- dispf ... display floating point register
 
 
 ## Supported
@@ -114,14 +116,14 @@ cargo run --release [file...]
 - [ ] Exception, Interrupt
     - [ ] SYSCALL
         - [x]  1: print_int
-        - [ ]  2: print_float
+        - [x]  2: print_float
         - [ ]  3: print_double
         - [x]  4: print_string
         - [x]  5: read_int
-        - [ ]  6: read_float
+        - [x]  6: read_float
         - [ ]  7: read_double
         - [x]  8: read_string
-        - [ ]  9: sbrk(allocate heap memory)
+        - [x]  9: sbrk(allocate heap memory)
         - [x] 10: exit
         - [x] 11: print_character
         - [x] 12: read_character
@@ -138,7 +140,7 @@ cargo run --release [file...]
     - [x] .word
     - [x] .half
     - [x] .byte
-    - [ ] .float
+    - [x] .float
     - [ ] .double
     - [x] .space
     - [x] .ascii[z]
@@ -150,6 +152,16 @@ cargo run --release [file...]
     - [x] PRTC
     - [x] PRTS
     - [x] RST
+- [ ] Floating point
+    - [x] LI.S
+    - [x] LWC1
+    - [x] SWC1
+    - [x] MTC1
+    - [x] ADD.S
+    - [x] DIV.S
+    - [x] MUL.S
+    - [x] SUB.S
+    - [x] CVT.S.W
 
 
 ## Note

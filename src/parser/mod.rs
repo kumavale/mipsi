@@ -394,6 +394,16 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                             0
                         };
                     },
+                    // read_float: return $f0
+                    6  => {
+                        let mut input = String::new();
+                        std::io::stdin().read_line(&mut input).unwrap();
+                        memory.registers[f0] = if let Ok(num) = input.trim().parse::<f32>() {
+                            num.to_bits() as i32
+                        } else {
+                            0
+                        };
+                    },
                     // read_string: $a0=buffer, $a1=length.  write buffer
                     8  => {
                         let mut input = String::new();
