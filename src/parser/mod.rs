@@ -5,7 +5,7 @@ use std::io::Write;
 use std::error::Error;
 
 use super::token::*;
-use super::token::register::{Registers, RegisterKind::*};
+use super::token::register::RegisterKind::*;
 use super::token::memory::*;
 
 pub mod display;
@@ -14,39 +14,11 @@ mod eval;
 use crate::parser::eval::*;
 mod test;
 
-use wasm_bindgen::prelude::*;
-#[cfg(target_arch = "wasm32")]
-use crate::wasm::draw_canvas;
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(a: &str);
-    fn prompt() -> String;
-}
-
-macro_rules! console_log {
-    () => (console_log!("\n"));
-    ($($t:tt)*) => ({
-        #[cfg(target_arch = "wasm32")]
-        log(&format_args!($($t)*).to_string());
-        #[cfg(not(target_arch = "wasm32"))]
-        print!($($t)*);
-    })
-}
-
 macro_rules! read_line {
     () => ({
-        #[cfg(target_arch = "wasm32")]
-        {
-            prompt()
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input).unwrap();
-            input
-        }
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+        input
     })
 }
 
@@ -406,17 +378,17 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                 match memory.registers[v0] {
                     // print_int: $a0=integer
                     1  => {
-                        console_log!("{}", memory.registers[a0]);
+                        print!("{}", memory.registers[a0]);
                         let _ = std::io::stdout().flush();
                     },
                     // print_float: $f12=integer
                     2  => {
-                        console_log!("{}", f32::from_bits(memory.registers[f12] as u32));
+                        print!("{}", f32::from_bits(memory.registers[f12] as u32));
                         let _ = std::io::stdout().flush();
                     },
                     // print_string: $a0=string(data index)
                     4  => {
-                        console_log!("{}", get_string(&memory, memory.registers[a0] as u32)?);
+                        print!("{}", get_string(&memory, memory.registers[a0] as u32)?);
                         let _ = std::io::stdout().flush();
                     },
                     // read_int: return $v0
@@ -441,14 +413,14 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                     8  => {
                         let input = read_line!();
                         let mut index = memory.registers[a0] as usize - 1;
-                        if memory.static_data().len() < index + input.len() {  // TODO
+                        if memory.static_data.len() < index + input.len() {  // TODO
                             return Err(format!("not enough space for .data: {}", memory.registers[a0]).into());
                         }
                         for (i, ch) in input.into_bytes().iter().enumerate() {
                             if i >= memory.registers[a1] as usize {
                                 break;
                             }
-                            memory.set_static_data(index, *ch);
+                            memory.static_data[index] = *ch;
                             index += 1;
                         }
                     },
@@ -464,7 +436,7 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                     },
                     // print_character
                     11 => {
-                        console_log!("{}", memory.registers[a0] as u8 as char);
+                        print!("{}", memory.registers[a0] as u8 as char);
                         let _ = std::io::stdout().flush();
                     },
                     // read character
@@ -486,7 +458,7 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                     // $a0 = random number(int)
                     // $a1 = upper bound of range of returned valus.
                     42 => {
-                        let rnd = rand::thread_rng().gen_range(0, memory.registers[a1]);
+                        let rnd = rand::thread_rng().gen_range(0..memory.registers[a1]);
                         memory.registers[a0] = rnd;
                     },
                     _ => return Err(format!("SYSCALL: invalid code: {}", memory.registers[v0]).into()),
@@ -507,14 +479,6 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
                 eval_myown(&memory, &mut tokens, InstructionKind::PRTC)?,
             InstructionKind::PRTS =>
                 eval_myown(&memory, &mut tokens, InstructionKind::PRTS)?,
-            InstructionKind::DISP => {
-                #[cfg(target_arch = "wasm32")]
-                {
-                    log("disp");
-                    //draw_canvas(memory.static_data.clone(), 0, 64, 64, 1, 1);
-                    //draw_canvas(memory.static_data.clone(), 0x4000, 64, 64, 1, 1);
-                }
-            },
             InstructionKind::RST => {
                 reset(&mut memory, &mut tokens);
                 break;
@@ -602,10 +566,10 @@ pub fn parse(mut tokens: &mut Tokens, mut memory: &mut Memory) -> Result<(), Box
         tokens.expect_eol()?;
 
         if tokens.data_trace() {
-            display_data_per_4byte(&memory.static_data());
+            display_data_per_4byte(&memory.static_data);
         }
         if tokens.stack_trace() {
-            display_stack(&memory.stack());
+            display_stack(&memory.stack);
         }
         if tokens.register_trace() {
             display_register(&memory.registers);
@@ -646,26 +610,26 @@ pub fn get_int(memory: &Memory, index: u32, byte: usize, se: SignExtension) -> R
         if index < DYNAMIC_DATA {
             // static data
             let index = (index - if STATIC_DATA <= index { STATIC_DATA } else { 0 } - 1) as usize;
-            if memory.static_data().len() < index+byte {
+            if memory.static_data.len() < index+byte {
                 return Err(
                     format!("get_int(): index out of bounds: the static-data len is {}, but the index is {}-{}",
-                    memory.static_data().len(), index, index+byte-1));
+                    memory.static_data.len(), index, index+byte-1));
             }
             // Big Endian
             for i in 0..byte {
-                int |= (memory.static_data()[index+i] as u32) << ((byte-1-i) * 8);
+                int |= (memory.static_data[index+i] as u32) << ((byte-1-i) * 8);
             }
         } else {
             // dynamic data
             let index = (index - DYNAMIC_DATA) as usize;
-            if memory.dynamic_data().len() < index+byte {
+            if memory.dynamic_data.len() < index+byte {
                 return Err(
                     format!("get_int(): index out of bounds: the dynamic-data len is {}, but the index is {}-{}",
-                    memory.dynamic_data().len(), index, index+byte-1));
+                    memory.dynamic_data.len(), index, index+byte-1));
             }
             // Big Endian
             for i in 0..byte {
-                int |= (memory.dynamic_data()[index+i] as u32) << ((byte-1-i) * 8);
+                int |= (memory.dynamic_data[index+i] as u32) << ((byte-1-i) * 8);
             }
         }
 
@@ -673,14 +637,14 @@ pub fn get_int(memory: &Memory, index: u32, byte: usize, se: SignExtension) -> R
     // stack
     } else {
         let index = (STACK_SEGMENT - index) as usize;
-        if memory.stack().len() < index+byte {
+        if memory.stack.len() < index+byte {
             return Err(
                 format!("get_int(): index out of bounds: the stack len is {}, but the index is {}-{}",
-                memory.stack().len(), index, index+byte-1));
+                memory.stack.len(), index, index+byte-1));
         }
         // Big Endian
         for i in 0..byte {
-            int |= (memory.stack()[index+i] as u32) << ((byte-1-i) * 8);
+            int |= (memory.stack[index+i] as u32) << ((byte-1-i) * 8);
         }
     }
 
@@ -697,10 +661,10 @@ pub fn get_string(memory: &Memory, index: u32) -> Result<String, String> {
             // static data
             let mut i = (index - if STATIC_DATA <= index { STATIC_DATA } else { 0 } - 1) as usize;
             let mut s = String::new();
-            let data_len = memory.static_data().len();
+            let data_len = memory.static_data.len();
 
-            while i < data_len && memory.static_data()[i] != 0 {
-                s.push(memory.static_data()[i] as char);
+            while i < data_len && memory.static_data[i] != 0 {
+                s.push(memory.static_data[i] as char);
                 i += 1;
             }
 
@@ -709,10 +673,10 @@ pub fn get_string(memory: &Memory, index: u32) -> Result<String, String> {
             // dynamic data
             let mut i = (index - DYNAMIC_DATA) as usize;
             let mut s = String::new();
-            let data_len = memory.dynamic_data().len();
+            let data_len = memory.dynamic_data.len();
 
-            while i < data_len && memory.dynamic_data()[i] != 0 {
-                s.push(memory.dynamic_data()[i] as char);
+            while i < data_len && memory.dynamic_data[i] != 0 {
+                s.push(memory.dynamic_data[i] as char);
                 i += 1;
             }
 
@@ -723,10 +687,10 @@ pub fn get_string(memory: &Memory, index: u32) -> Result<String, String> {
     } else {
         let mut i = (STACK_SEGMENT - index) as usize;
         let mut s = String::new();
-        let stack_len = memory.stack().len();
+        let stack_len = memory.stack.len();
 
-        while i < stack_len && memory.stack()[i] != 0 {
-            s.push(memory.stack()[i] as char);
+        while i < stack_len && memory.stack[i] != 0 {
+            s.push(memory.stack[i] as char);
             i += 1;
         }
 
@@ -740,7 +704,7 @@ fn reset(memory: &mut Memory, tokens: &mut Tokens) {
 }
 
 /// Push to data: &Vec<u8> from .data segment's data
-pub fn data_analysis(tokens: &mut Tokens, memory: &mut Memory) {
+fn data_analysis(tokens: &mut Tokens, memory: &mut Memory) {
     let old_idx = tokens.idx();
     tokens.goto(if old_idx == 0 {0} else {old_idx-1});
 
@@ -757,10 +721,8 @@ pub fn data_analysis(tokens: &mut Tokens, memory: &mut Memory) {
             },
             TokenKind::INDICATE(IndicateKind::align(n)) => {
                 let padding = 2i32.pow(n as u32) as usize;
-                let i = memory.static_data().len() % padding;
-                for _ in 0..i {
-                    memory.push_static_data(0);
-                }
+                let i = memory.static_data.len() % padding;
+                memory.static_data.resize(memory.static_data.len() + i, 0);
                 continue;
             },
             _ => (),
@@ -786,7 +748,7 @@ pub fn data_analysis(tokens: &mut Tokens, memory: &mut Memory) {
 
                 // TokenKind::LABEL(usize) = data.len() + 1
                 if let TokenKind::LABEL(_, _, ref mut index) = &mut tokens.kind() {
-                    *index = Some(memory.static_data().len()+1);
+                    *index = Some(memory.static_data.len()+1);
                     if tokens.next().is_some() && tokens.next().unwrap().kind == TokenKind::EOL {
                         continue 'outer;
                     }
@@ -796,29 +758,25 @@ pub fn data_analysis(tokens: &mut Tokens, memory: &mut Memory) {
                     // Align 2^n
                     TokenKind::INDICATE(IndicateKind::align(n)) => {
                         let padding = 2i32.pow(*n as u32) as usize;
-                        let i = padding - memory.static_data().len() % padding;
-                        for _ in 0..i {
-                            memory.push_static_data(0);
-                        }
+                        let i = padding - memory.static_data.len() % padding;
+                        memory.static_data.resize(memory.static_data.len() + i, 0);
                         continue 'outer;
                     },
                     TokenKind::INDICATE(IndicateKind::space(s)) => {
-                        for _ in 0..*s {
-                            memory.push_static_data(0);
-                        }
+                        memory.static_data.resize(memory.static_data.len() + *s as usize, 0);
                         continue 'outer;
                     },
                     TokenKind::INDICATE(IndicateKind::ascii(s)) => {
                         for ch in s.bytes() {
-                            memory.push_static_data(ch);
+                            memory.static_data.push(ch);
                         }
                         continue 'outer;
                     },
                     TokenKind::INDICATE(IndicateKind::asciiz(s)) => {
                         for ch in s.bytes() {
-                            memory.push_static_data(ch);
+                            memory.static_data.push(ch);
                         }
-                        memory.push_static_data(0);
+                        memory.static_data.push(0);
                         continue 'outer;
                     },
                     _ => (),
@@ -829,26 +787,26 @@ pub fn data_analysis(tokens: &mut Tokens, memory: &mut Memory) {
                     let still_indicate = match tokens.kind() {
                         // Big Endian
                         TokenKind::INDICATE(IndicateKind::word(w)) => {
-                            memory.push_static_data((*w>>24) as u8);
-                            memory.push_static_data((*w>>16) as u8);
-                            memory.push_static_data((*w>> 8) as u8);
-                            memory.push_static_data( *w      as u8);
+                            memory.static_data.push((*w>>24) as u8);
+                            memory.static_data.push((*w>>16) as u8);
+                            memory.static_data.push((*w>> 8) as u8);
+                            memory.static_data.push( *w      as u8);
                             true
                         },
                         TokenKind::INDICATE(IndicateKind::half(h)) => {
-                            memory.push_static_data((*h>> 8) as u8);
-                            memory.push_static_data( *h      as u8);
+                            memory.static_data.push((*h>> 8) as u8);
+                            memory.static_data.push( *h      as u8);
                             true
                         },
                         TokenKind::INDICATE(IndicateKind::byte(b)) => {
-                            memory.push_static_data(*b);
+                            memory.static_data.push(*b);
                             true
                         },
                         TokenKind::INDICATE(IndicateKind::float(f)) => {
-                            memory.push_static_data((f.to_bits()>>24) as u8);
-                            memory.push_static_data((f.to_bits()>>16) as u8);
-                            memory.push_static_data((f.to_bits()>> 8) as u8);
-                            memory.push_static_data( f.to_bits()      as u8);
+                            memory.static_data.push((f.to_bits()>>24) as u8);
+                            memory.static_data.push((f.to_bits()>>16) as u8);
+                            memory.static_data.push((f.to_bits()>> 8) as u8);
+                            memory.static_data.push( f.to_bits()      as u8);
                             true
                         },
                         _ => false,

@@ -124,7 +124,6 @@ pub enum InstructionKind {
     PRTX,     // Rs|literal            | Print hex (add 0x)
     PRTC,     // Rs|literal|label      | Print char
     PRTS,     // Rs|literal|label      | Print string
-    DISP,     // Display (for wasm)
     RST,      // Reset
 
     /// # FPU Instructions

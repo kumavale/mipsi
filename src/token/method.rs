@@ -43,7 +43,6 @@ impl Tokens {
     }
 
     // Use only in REPL
-    #[allow(dead_code)]
     pub fn pop(&mut self) -> Option<Token> {
         if 0 < self.length {
             self.length -= 1;
@@ -61,7 +60,6 @@ impl Tokens {
     }
 
     // Use only in REPL
-    #[allow(dead_code)]
     pub fn back_idx(&mut self) {
         if 0 < self.idx {
             self.idx -= 1;
@@ -90,27 +88,22 @@ impl Tokens {
         self.token_trace
     }
 
-    #[allow(dead_code)]
     pub fn data_trace(&self) -> bool {
         self.data_trace
     }
 
-    #[allow(dead_code)]
     pub fn stack_trace(&self) -> bool {
         self.stack_trace
     }
 
-    #[allow(dead_code)]
     pub fn register_trace(&self) -> bool {
         self.register_trace
     }
 
-    #[allow(dead_code)]
     pub fn fp_register_trace(&self) -> bool {
         self.fp_register_trace
     }
 
-    #[allow(dead_code)]
     pub fn consume(&mut self) -> Option<&Token> {
         if self.foremost {
             self.foremost = false;

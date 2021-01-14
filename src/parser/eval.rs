@@ -3,31 +3,10 @@ use super::super::token::register::{Registers, RegisterKind::*};
 use super::super::token::memory::*;
 use super::super::parser::{SignExtension, get_int, get_string};
 
-#[cfg(target_arch = "wasm32")]
-use crate::wasm::draw_canvas;
-
 use std::io::Write;
 use std::error::Error;
 
-use wasm_bindgen::prelude::*;
-
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(a: &str);
-}
-
-macro_rules! console_log {
-    () => (console_log!("\n"));
-    ($($t:tt)*) => ({
-        #[cfg(target_arch = "wasm32")]
-        log(&format_args!($($t)*).to_string());
-        #[cfg(not(target_arch = "wasm32"))]
-        print!($($t)*);
-    })
-}
 
 pub fn eval_arithmetic<F>(registers: &mut Registers, tokens: &mut Tokens, fun: F)
     -> Result<()>
@@ -288,37 +267,37 @@ pub fn eval_store(memory: &mut Memory, tokens: &mut Tokens, byte: usize) -> Resu
                 // static data
                 let index = (idx - if STATIC_DATA <= idx { STATIC_DATA } else { 0 } - 1) as usize;
                 for i in 0..byte {
-                    memory.set_static_data(index+i, (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8);
+                    memory.static_data[index+i] = (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8;
                 }
             } else {
                 // dynamic data
                 let index = (idx - DYNAMIC_DATA) as usize;
                 for i in 0..byte {
-                    memory.set_dynamic_data(index+i, (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8);
+                    memory.dynamic_data[index+i] = (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8;
                 }
             }
 
         // stack
         } else {
             let index = (STACK_SEGMENT - idx) as usize;
-            if memory.stack().len() <= index+byte {
-                memory.resize_stack(index+byte+1);
+            if memory.stack.len() <= index+byte {
+                memory.stack.resize(index+byte+1, 0);
             }
             for i in 0..byte {
-                memory.set_stack(index+i, (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8);
+                memory.stack[index+i] = (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8;
             }
         }
     } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
         let index = memory.registers[r_idx] as usize + d_idx - 1;
         for i in 0..byte {
-            memory.set_static_data(index - if STATIC_DATA as usize <= index { STATIC_DATA as usize } else { 0 } + i,
-                (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8);
+            memory.static_data[index - if STATIC_DATA as usize <= index { STATIC_DATA as usize } else { 0 } + i]
+                = (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8;
         }
     } else {
         let index = tokens.expect_address()? - 1;
         for i in 0..byte {
-            memory.set_static_data(index - if STATIC_DATA as usize <= index { STATIC_DATA as usize } else { 0 } + i,
-                (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8);
+            memory.static_data[index - if STATIC_DATA as usize <= index { STATIC_DATA as usize } else { 0 } + i]
+                = (memory.registers[register_idx] >> ((byte-1-i)*8)) as u8;
         }
     }
 
@@ -328,95 +307,95 @@ pub fn eval_store(memory: &mut Memory, tokens: &mut Tokens, byte: usize) -> Resu
 pub fn eval_myown(memory: &Memory, tokens: &mut Tokens, kind: InstructionKind) -> Result<()> {
     match kind {
         InstructionKind::PRTN => {
-            console_log!();
+            println!();
         },
         InstructionKind::PRTI => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                console_log!("{}", memory.registers[r_idx]);
+                print!("{}", memory.registers[r_idx]);
             } else if let Ok(num) = tokens.expect_integer() {
-                console_log!("{}", num);
+                print!("{}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
                 let idx = memory.registers[r_idx] as u32 + s_idx;
-                console_log!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                 let idx = (memory.registers[r_idx] as usize + d_idx) as u32;
-                console_log!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else {
                 let idx = tokens.expect_address()? as u32;
-                console_log!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
         },
         InstructionKind::PRTH => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                console_log!("{:x}", memory.registers[r_idx]);
+                print!("{:x}", memory.registers[r_idx]);
             } else if let Ok(num) = tokens.expect_integer() {
-                console_log!("{:x}", num);
+                print!("{:x}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
                 let idx = memory.registers[r_idx] as u32 + s_idx;
-                console_log!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                 let idx = memory.registers[r_idx] as u32 + d_idx as u32;
-                console_log!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else {
                 let idx = tokens.expect_address()? as u32;
-                console_log!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
         },
         InstructionKind::PRTX => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                console_log!("0x{:x}", memory.registers[r_idx]);
+                print!("0x{:x}", memory.registers[r_idx]);
             } else if let Ok(num) = tokens.expect_integer() {
-                console_log!("0x{:x}", num);
+                print!("0x{:x}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
                 let idx = memory.registers[r_idx] as u32 + s_idx;
-                console_log!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                 let idx = memory.registers[r_idx] as u32 + d_idx as u32;
-                console_log!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             } else {
                 let idx = tokens.expect_address()? as u32;
-                console_log!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
         },
         InstructionKind::PRTC => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                console_log!("{}", memory.registers[r_idx] as u8 as char);
+                print!("{}", memory.registers[r_idx] as u8 as char);
             } else if let Ok(d_idx) = tokens.expect_address() {
-                console_log!("{}", memory.static_data()[d_idx-1] as char);
+                print!("{}", memory.static_data[d_idx-1] as char);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
                 let idx = memory.registers[r_idx] as u32 + s_idx;
-                console_log!("{}", &get_string(&memory, idx)?[..1]);
+                print!("{}", &get_string(&memory, idx)?[..1]);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                 let idx = (memory.registers[r_idx] as usize + d_idx) as usize;
-                console_log!("{}", memory.static_data()[idx-1] as char);
+                print!("{}", memory.static_data[idx-1] as char);
             } else {
                 let ch = tokens.expect_integer()? as u8 as char;
-                console_log!("{}", ch);
+                print!("{}", ch);
             }
             let _ = std::io::stdout().flush();
         },
         InstructionKind::PRTS => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                console_log!("{}", get_string(&memory, memory.registers[r_idx] as u32)?);
+                print!("{}", get_string(&memory, memory.registers[r_idx] as u32)?);
             } else if let Ok(d_idx) = tokens.expect_address() {
-                console_log!("{}", get_string(&memory, d_idx as u32)?);
+                print!("{}", get_string(&memory, d_idx as u32)?);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
                 let idx = memory.registers[r_idx] as u32 + s_idx;
-                console_log!("{}", get_string(&memory, idx)?);
+                print!("{}", get_string(&memory, idx)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                 let idx = memory.registers[r_idx] as u32 + d_idx as u32;
-                console_log!("{}", get_string(&memory, idx)?);
+                print!("{}", get_string(&memory, idx)?);
             } else {
                 let s = tokens.expect_literal()?;
-                console_log!("{}", s);
+                print!("{}", s);
             }
             let _ = std::io::stdout().flush();
         },
