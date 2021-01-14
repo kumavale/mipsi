@@ -42,6 +42,8 @@ impl Tokens {
         self.token.push(Token { kind, line, filename_idx });
     }
 
+    // Use only in REPL
+    #[allow(dead_code)]
     pub fn pop(&mut self) -> Option<Token> {
         if 0 < self.length {
             self.length -= 1;
@@ -58,6 +60,8 @@ impl Tokens {
         }
     }
 
+    // Use only in REPL
+    #[allow(dead_code)]
     pub fn back_idx(&mut self) {
         if 0 < self.idx {
             self.idx -= 1;

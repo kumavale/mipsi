@@ -2,10 +2,10 @@
 extern crate clap;
 
 mod cli;
-mod repl;
-mod token;
 mod lexer;
 mod parser;
+mod repl;
+mod token;
 
 use clap::{Arg, App};
 

@@ -159,6 +159,7 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                 "PRTX"    => TokenKind::INSTRUCTION(InstructionKind::PRTX),
                 "PRTC"    => TokenKind::INSTRUCTION(InstructionKind::PRTC),
                 "PRTS"    => TokenKind::INSTRUCTION(InstructionKind::PRTS),
+                "DISP"    => TokenKind::INSTRUCTION(InstructionKind::DISP),
                 "RST"     => TokenKind::INSTRUCTION(InstructionKind::RST),
 
                 // FPU Instructions

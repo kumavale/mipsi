@@ -2,6 +2,8 @@ use std::io::Write;
 use crate::token::register::Registers;
 
 // Display help
+// Use only in REPL
+#[allow(dead_code)]
 pub fn display_help() {
     println!("exit  ... to exit");
     println!("help  ... display this message");

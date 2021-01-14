@@ -1,5 +1,6 @@
 use std::ops::{Index, IndexMut};
 use super::memory::*;
+use wasm_bindgen::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 #[allow(non_camel_case_types)]
@@ -26,7 +27,8 @@ pub enum RegisterKind {
     fcsr,                                      // FPU control and status register
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[wasm_bindgen]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Registers {
     regs: [i32; 32+32+1],
 }

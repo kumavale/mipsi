@@ -7,6 +7,37 @@ description = "A MIPS-32 simulator"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
-rand = "0.7"
+rand = { version = "0.7", features = ["wasm-bindgen"] }
 clap = "2.33.3"
+js-sys = "0.3.46"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+
+# The `console_error_panic_hook` crate provides better debugging of panics by
+# logging them with `console.error`. This is great for development, but requires
+# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
+# code size when deploying.
+console_error_panic_hook = { version = "0.1.6", optional = true }
+
+[dependencies.web-sys]
+version = "0.3.46"
+features = [
+    'Blob',
+    'CanvasRenderingContext2d',
+    'Document',
+    'Element',
+    'File',
+    'FileList',
+    'FileReader',
+    'HtmlCanvasElement',
+    'HtmlInputElement',
+    'HtmlTextAreaElement',
+    'ImageData',
+    'Node',
+    'Performance',
+    'Window',
+]
