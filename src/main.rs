@@ -11,7 +11,7 @@ use clap::Parser;
 #[command(version, about)]
 struct Cli {
     /// Optional name to operate on
-    #[arg(short, long, value_name = "FILE")]
+    #[arg(value_name = "FILE")]
     files: Vec<PathBuf>,
 }
 
