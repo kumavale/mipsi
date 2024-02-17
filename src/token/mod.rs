@@ -7,6 +7,7 @@ use super::token::register::RegisterKind;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[allow(non_camel_case_types)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum InstructionKind {
     /// # CPU Instructions
     /// Arithmetic, Logic
@@ -185,6 +186,7 @@ pub enum IndicateKind {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum TokenKind {
     INSTRUCTION(InstructionKind),         // Instruction
     INDICATE(IndicateKind),               // Indication

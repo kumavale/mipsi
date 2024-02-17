@@ -14,7 +14,7 @@ pub fn run(files: &[&str]) {
     for (filename_idx, file) in files.iter().enumerate() {
         let mut number_of_lines: u32 = 1;
         let mut reader = BufReader::new(File::open(file).expect("Failed file open"));
-        tokens.add_file(&file);
+        tokens.add_file(file);
 
         let mut buf = String::new();
         while 0 < reader.read_line(&mut buf).unwrap() {

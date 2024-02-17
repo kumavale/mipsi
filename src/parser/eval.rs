@@ -249,7 +249,7 @@ pub fn eval_load(memory: &mut Memory, tokens: &mut Tokens, byte: usize, se: Sign
     } else {
         tokens.expect_address()? as u32
     };
-    memory.registers[register_idx] = get_int(&memory, idx, byte, se)?;
+    memory.registers[register_idx] = get_int(memory, idx, byte, se)?;
 
     Ok(())
 }
@@ -317,13 +317,13 @@ pub fn eval_myown(memory: &Memory, tokens: &mut Tokens, kind: InstructionKind) -
                 print!("{}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
                 let idx = memory.registers[r_idx] as u32 + s_idx;
-                print!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{}", get_int(memory, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                 let idx = (memory.registers[r_idx] as usize + d_idx) as u32;
-                print!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{}", get_int(memory, idx, 4, SignExtension::Unsigned)?);
             } else {
                 let idx = tokens.expect_address()? as u32;
-                print!("{}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{}", get_int(memory, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
         },
@@ -335,13 +335,13 @@ pub fn eval_myown(memory: &Memory, tokens: &mut Tokens, kind: InstructionKind) -
                 print!("{:x}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
                 let idx = memory.registers[r_idx] as u32 + s_idx;
-                print!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{:x}", get_int(memory, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                 let idx = memory.registers[r_idx] as u32 + d_idx as u32;
-                print!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{:x}", get_int(memory, idx, 4, SignExtension::Unsigned)?);
             } else {
                 let idx = tokens.expect_address()? as u32;
-                print!("{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("{:x}", get_int(memory, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
         },
@@ -353,13 +353,13 @@ pub fn eval_myown(memory: &Memory, tokens: &mut Tokens, kind: InstructionKind) -
                 print!("0x{:x}", num);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
                 let idx = memory.registers[r_idx] as u32 + s_idx;
-                print!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("0x{:x}", get_int(memory, idx, 4, SignExtension::Unsigned)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                 let idx = memory.registers[r_idx] as u32 + d_idx as u32;
-                print!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("0x{:x}", get_int(memory, idx, 4, SignExtension::Unsigned)?);
             } else {
                 let idx = tokens.expect_address()? as u32;
-                print!("0x{:x}", get_int(&memory, idx, 4, SignExtension::Unsigned)?);
+                print!("0x{:x}", get_int(memory, idx, 4, SignExtension::Unsigned)?);
             }
             let _ = std::io::stdout().flush();
         },
@@ -371,9 +371,9 @@ pub fn eval_myown(memory: &Memory, tokens: &mut Tokens, kind: InstructionKind) -
                 print!("{}", memory.static_data[d_idx-1] as char);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
                 let idx = memory.registers[r_idx] as u32 + s_idx;
-                print!("{}", &get_string(&memory, idx)?[..1]);
+                print!("{}", &get_string(memory, idx)?[..1]);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
-                let idx = (memory.registers[r_idx] as usize + d_idx) as usize;
+                let idx = memory.registers[r_idx] as usize + d_idx;
                 print!("{}", memory.static_data[idx-1] as char);
             } else {
                 let ch = tokens.expect_integer()? as u8 as char;
@@ -384,15 +384,15 @@ pub fn eval_myown(memory: &Memory, tokens: &mut Tokens, kind: InstructionKind) -
         InstructionKind::PRTS => {
             tokens.consume().ok_or(CONSUME_ERR)?;
             if let Ok(r_idx) = tokens.expect_register() {
-                print!("{}", get_string(&memory, memory.registers[r_idx] as u32)?);
+                print!("{}", get_string(memory, memory.registers[r_idx] as u32)?);
             } else if let Ok(d_idx) = tokens.expect_address() {
-                print!("{}", get_string(&memory, d_idx as u32)?);
+                print!("{}", get_string(memory, d_idx as u32)?);
             } else if let Ok((r_idx, s_idx)) = tokens.expect_memory() { // data or stack
                 let idx = memory.registers[r_idx] as u32 + s_idx;
-                print!("{}", get_string(&memory, idx)?);
+                print!("{}", get_string(memory, idx)?);
             } else if let Ok((r_idx, d_idx)) = tokens.expect_data() {
                 let idx = memory.registers[r_idx] as u32 + d_idx as u32;
-                print!("{}", get_string(&memory, idx)?);
+                print!("{}", get_string(memory, idx)?);
             } else {
                 let s = tokens.expect_literal()?;
                 print!("{}", s);
