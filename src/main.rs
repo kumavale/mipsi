@@ -1,29 +1,29 @@
-#[macro_use]
-extern crate clap;
-
 mod cli;
 mod lexer;
 mod parser;
 mod repl;
 mod token;
 
-use clap::{Arg, App};
+use std::path::PathBuf;
+use clap::Parser;
+
+#[derive(Parser)]
+#[command(version, about)]
+struct Cli {
+    #[arg(value_name = "FILE")]
+    files: Vec<PathBuf>,
+}
 
 fn main() {
-    let matches = App::new("mipsi")
-        .version(crate_version!())
-        .about(crate_description!())
-        .arg(Arg::with_name("file").multiple(true))
-        .get_matches();
+    let cli = Cli::parse();
 
     // REPL
-    if matches.values_of("file").is_none() {
+    if cli.files.is_empty() {
         repl::run();
         return;
     }
 
     // CLI
-    let files: Vec<&str> = matches.values_of("file").unwrap().collect();
-    cli::run(&files);
+    cli::run(&cli.files);
 }
 
