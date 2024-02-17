@@ -5,10 +5,10 @@ use super::token::register::RegisterKind;
 /// Recieve 1 line
 /// nol: number_of_lines
 /// fi:  filename_idx
-pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
+pub fn tokenize(nol: u32, fi: usize, line: &str, tokens: &mut Tokens)
     -> Result<(), String>
 {
-    let words: Vec<String> = split_words(&line);
+    let words: Vec<String> = split_words(line);
     let words: Vec<&str>   = words.iter().map(|s| &**s).collect();
 
     //println!("{:?}", words);
@@ -24,13 +24,13 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
             tokens.push(TokenKind::INTEGER(num), nol, fi);
         } else if let Ok(num) = word.parse::<f32>() {
             tokens.push(TokenKind::FLOATING(num), nol, fi);
-        } else if let Some(num) = is_hexadecimal(&word) {
+        } else if let Some(num) = is_hexadecimal(word) {
             tokens.push(TokenKind::INTEGER(num), nol, fi);
-        } else if let Ok((k, i)) = is_register(&word) {
+        } else if let Ok((k, i)) = is_register(word) {
             tokens.push(TokenKind::REGISTER(k, i), nol, fi);
-        } else if let Ok((k, i, a)) = is_memory(&word) {
+        } else if let Ok((k, i, a)) = is_memory(word) {
             tokens.push(TokenKind::MEMORY(k, i, a), nol, fi);
-        } else if let Ok((k, i, s)) = is_data_address(&word) {
+        } else if let Ok((k, i, s)) = is_data_address(word) {
             tokens.push(TokenKind::DATA(k, i, s), nol, fi);
         } else {
             let token_kind = match &*word.to_ascii_uppercase() {
@@ -182,12 +182,12 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                 "CVT.W.S" => TokenKind::INSTRUCTION(InstructionKind::CVT_W_S),
 
                 _ =>
-                    if is_label(&word) {
+                    if is_label(word) {
                         let mut identifier = (*word).to_string();
                         identifier.pop();  // Delete ':'
                         tokens.add_address(identifier.clone(), tokens.len());
                         TokenKind::LABEL(identifier, tokens.len(), None)
-                    } else if is_indicate(&word) {
+                    } else if is_indicate(word) {
                         match *word {
                             ".text" => {
                                 // ignore <Addr>
@@ -204,24 +204,24 @@ pub fn tokenize(nol: u32, fi: usize, line: &str, mut tokens: &mut Tokens)
                                 TokenKind::INDICATE(IndicateKind::globl(label))
                             },
                             ".word" => {
-                                indicate_word(&mut tokens, nol, fi, words);
+                                indicate_word(tokens, nol, fi, words);
                                 break;
                             },
                             ".half" => {
-                                indicate_half(&mut tokens, nol, fi, words);
+                                indicate_half(tokens, nol, fi, words);
                                 break;
                             },
                             ".byte" => {
-                                indicate_byte(&mut tokens, nol, fi, words);
+                                indicate_byte(tokens, nol, fi, words);
                                 break;
                             },
                             ".float" => {
-                                indicate_float(&mut tokens, nol, fi, words);
+                                indicate_float(tokens, nol, fi, words);
                                 break;
                             },
                             ".space" => {
                                 let word = words.next().unwrap();
-                                let length = indicate_space(&word);
+                                let length = indicate_space(word);
                                 TokenKind::INDICATE(IndicateKind::space(length))
                             },
                             ".ascii" => {
@@ -480,7 +480,7 @@ fn indicate_word(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice
 
         } else {
             int = {
-                if let Some(num) = is_hexadecimal(&word) {
+                if let Some(num) = is_hexadecimal(word) {
                     num as u32
                 } else if let Ok(num) = word.parse::<i32>() {
                     num as u32
@@ -520,7 +520,7 @@ fn indicate_half(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice
 
         } else {
             half = {
-                if let Some(num) = is_hexadecimal(&word) {
+                if let Some(num) = is_hexadecimal(word) {
                     num as u16
                 } else if let Ok(num) = word.parse::<i16>() {
                     num as u16
@@ -559,7 +559,7 @@ fn indicate_byte(tokens: &mut Tokens, nol: u32, fi: usize, mut words: std::slice
             }
         } else {
             byte = {
-                if let Some(num) = is_hexadecimal(&word) {
+                if let Some(num) = is_hexadecimal(word) {
                     num as u8
                 } else if let Ok(num) = word.parse::<i8>() {
                     num as u8
